@@ -1,0 +1,30 @@
+# Chrome Extension
+*.crx
+*.pem
+*.zip
+
+# Node modules (if any)
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# OAuth credentials (keep local, don't commit)
+credentials.json
+.env
+
