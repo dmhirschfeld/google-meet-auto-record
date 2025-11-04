@@ -36,7 +36,8 @@
     "client_id": "YOUR_CLIENT_ID.apps.googleusercontent.com",
     "scopes": [
       "https://www.googleapis.com/auth/chat.meetingspace.readonly",
-      "https://www.googleapis.com/auth/meetings.space.readonly"
+      "https://www.googleapis.com/auth/meetings.space.readonly",
+      "https://www.googleapis.com/auth/workspace.events"
     ]
   },
   "icons": {
