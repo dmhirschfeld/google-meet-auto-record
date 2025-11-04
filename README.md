@@ -26,8 +26,8 @@ A Chrome extension that automatically starts recording when the host joins a Goo
 3. Enable the following APIs (both are required):
    - **Google Workspace Events API** (`workspaceevents.googleapis.com`)
      - Search for: "Google Workspace Events API"
-   - **Google Meet API** (`meet.googleapis.com`)
-     - Search for: "Google Meet API"
+   - **Google Meet REST API** (`meet.googleapis.com`)
+     - Search for: "Google Meet REST API"
    
    Both APIs are needed for the extension to work properly.
 
