@@ -23,9 +23,13 @@ A Chrome extension that automatically starts recording when the host joins a Goo
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a new project or select an existing one
-3. Enable the following APIs:
-   - Google Workspace Events API
-   - Google Meet API (if available)
+3. Enable the following APIs (both are required):
+   - **Google Workspace Events API** (`workspaceevents.googleapis.com`)
+     - Search for: "Google Workspace Events API"
+   - **Google Meet API** (`meet.googleapis.com`)
+     - Search for: "Google Meet API"
+   
+   Both APIs are needed for the extension to work properly.
 
 ### 2. OAuth 2.0 Configuration
 
