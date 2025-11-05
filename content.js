@@ -791,9 +791,34 @@ function handleRecordingDialog() {
     
     // Wait briefly for checkboxes to register, then click Start immediately
     setTimeout(() => {
-      // Verify checkboxes were actually checked
-      const captionsCheckbox = document.getElementById('c181');
-      const transcriptCheckbox = document.getElementById('c182');
+      // Verify checkboxes were actually checked using same detection methods
+      let captionsCheckbox = document.querySelector('div[jsname="d9LF6c"]')?.querySelector('input[type="checkbox"]');
+      let transcriptCheckbox = document.querySelector('div[jsname="AXUMc"]')?.querySelector('input[type="checkbox"]');
+      
+      // Fallback: search by label text
+      if (!captionsCheckbox) {
+        const labels = document.querySelectorAll('label');
+        for (const label of labels) {
+          const labelText = (label.textContent || label.innerText || '').toLowerCase();
+          if (labelText.includes('include captions')) {
+            const forId = label.getAttribute('for');
+            captionsCheckbox = forId ? document.getElementById(forId) : label.querySelector('input[type="checkbox"]');
+            break;
+          }
+        }
+      }
+      
+      if (!transcriptCheckbox) {
+        const labels = document.querySelectorAll('label');
+        for (const label of labels) {
+          const labelText = (label.textContent || label.innerText || '').toLowerCase();
+          if (labelText.includes('also start a transcript') || labelText.includes('start a transcript')) {
+            const forId = label.getAttribute('for');
+            transcriptCheckbox = forId ? document.getElementById(forId) : label.querySelector('input[type="checkbox"]');
+            break;
+          }
+        }
+      }
       
       console.log('[Auto Record] Final checkbox status - Captions:', captionsCheckbox?.checked, 'Transcript:', transcriptCheckbox?.checked);
       
