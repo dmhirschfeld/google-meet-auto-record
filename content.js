@@ -339,6 +339,14 @@ function findRecordingButton() {
     // Wait 1-2 seconds for menu to fully open and stabilize before trying to click
     console.log('[Auto Record] Waiting for menu to open...');
     setTimeout(() => {
+      // Try to find the menu element first
+      const menu = findOpenMenu();
+      if (menu) {
+        console.log('[Auto Record] Menu found, searching for "Manage recording"...');
+      } else {
+        console.log('[Auto Record] Menu not found, will search everywhere');
+      }
+      
       const manageRecordingOption = findManageRecordingOption();
       if (manageRecordingOption) {
         console.log('[Auto Record] ✅ Found "Manage recording" option, clicking...');
@@ -418,11 +426,8 @@ function findRecordingButton() {
   return null;
 }
 
-// Find "Manage recording" option in the More options menu
-function findManageRecordingOption() {
-  console.log('[Auto Record] Searching for "Manage recording" option...');
-  
-  // First, try to find the menu that's open
+// Find the open menu
+function findOpenMenu() {
   const menuSelectors = [
     '[role="menu"]',
     '[role="listbox"]',
@@ -431,22 +436,31 @@ function findManageRecordingOption() {
     '[role="list"]'
   ];
   
-  let menu = null;
   for (const selector of menuSelectors) {
     const menus = document.querySelectorAll(selector);
     for (const m of menus) {
       const style = window.getComputedStyle(m);
       if (style.display !== 'none' && style.visibility !== 'hidden') {
         const menuText = (m.textContent || m.innerText || '').toLowerCase();
-        if (menuText.includes('manage recording') || menuText.includes('cast this meeting')) {
-          menu = m;
+        if (menuText.includes('manage recording') || 
+            menuText.includes('cast this meeting') ||
+            menuText.includes('adjust view') ||
+            menuText.includes('full screen')) {
           console.log('[Auto Record] Found open menu with selector:', selector);
-          break;
+          return m;
         }
       }
     }
-    if (menu) break;
   }
+  return null;
+}
+
+// Find "Manage recording" option in the More options menu
+function findManageRecordingOption() {
+  console.log('[Auto Record] Searching for "Manage recording" option...');
+  
+  // First, try to find the menu that's open
+  const menu = findOpenMenu();
   
   // Search in the menu if found, otherwise search everywhere
   const searchRoot = menu || document;
