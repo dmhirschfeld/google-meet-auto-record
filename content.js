@@ -59,7 +59,12 @@ async function startHostDetection() {
 
 // Detect host join via DOM monitoring
 function detectHostJoinViaDOM() {
-  if (hostJoined) return;
+  if (hostJoined) {
+    console.log('[Auto Record] Already detected host join');
+    return;
+  }
+
+  console.log('[Auto Record] Checking for host join... (attempt ' + (retryCount + 1) + ')');
 
   // Check for indicators that user has joined the meeting
   const indicators = [
@@ -74,51 +79,102 @@ function detectHostJoinViaDOM() {
     '[data-meeting-title]',
     // Bottom control bar
     '[aria-label*="Leave call"]',
-    '[aria-label*="Leave"]'
+    '[aria-label*="Leave"]',
+    // Additional indicators
+    'button[aria-label*="Leave"]',
+    '[aria-label*="Mute microphone"]',
+    '[aria-label*="Turn off camera"]'
   ];
 
-  const hasJoined = indicators.some(selector => {
-    return document.querySelector(selector) !== null;
+  const foundIndicators = [];
+  indicators.forEach(selector => {
+    const element = document.querySelector(selector);
+    if (element) {
+      foundIndicators.push(selector);
+    }
   });
+
+  const hasJoined = foundIndicators.length > 0;
+  console.log('[Auto Record] Join indicators found:', foundIndicators);
 
   if (hasJoined) {
     // Additional check: verify we're actually in a meeting (not just pre-join screen)
     const joinButton = document.querySelector('[jsname="Qx7uuf"]') || 
                       document.querySelector('[aria-label*="Join"]');
     
+    console.log('[Auto Record] Join button found:', !!joinButton);
+    
     if (!joinButton || joinButton.textContent.trim() === '') {
+      console.log('[Auto Record] User has joined, checking for host status...');
+      
+      // For instant meetings, the creator is always the host
       // Check if recording button is available (indicates host)
       const recordingButton = findRecordingButton();
+      console.log('[Auto Record] Recording button found:', !!recordingButton);
+      
       if (recordingButton) {
         // User is host and recording button is available
-        console.log('Host detected - recording button found');
+        console.log('[Auto Record] ✅ Host detected - recording button found');
+        hostJoined = true;
+        handleHostJoined();
+        return;
+      }
+      
+      // Check for host controls indicator
+      const hostControlsSelectors = [
+        '[aria-label*="Host controls"]',
+        '[data-tooltip*="Host"]',
+        '[aria-label*="More options"]',
+        'button[aria-label*="More options"]'
+      ];
+      
+      let hostControls = null;
+      for (const selector of hostControlsSelectors) {
+        hostControls = document.querySelector(selector);
+        if (hostControls) {
+          console.log('[Auto Record] Host controls found:', selector);
+          break;
+        }
+      }
+      
+      // For instant meetings, if user created it, they're the host
+      // Check URL or other indicators
+      const isInstantMeeting = window.location.href.includes('meet.google.com');
+      const hasMeetingControls = document.querySelector('[aria-label*="Present"]') ||
+                                 document.querySelector('[aria-label*="Activities"]') ||
+                                 document.querySelector('[aria-label*="People"]');
+      
+      console.log('[Auto Record] Meeting controls found:', !!hasMeetingControls);
+      
+      if (hostControls || (isInstantMeeting && hasMeetingControls)) {
+        console.log('[Auto Record] ✅ Host detected - proceeding to find recording button');
+        // User is likely host, proceed anyway (button might be in menu)
         hostJoined = true;
         handleHostJoined();
       } else {
-        // User has joined but recording button not found yet
-        // Check for host controls indicator
-        const hostControls = document.querySelector('[aria-label*="Host controls"]') ||
-                            document.querySelector('[data-tooltip*="Host"]') ||
-                            document.querySelector('[aria-label*="More options"]');
-        
-        if (hostControls) {
-          console.log('Host controls found, waiting for recording button...');
-          // User is likely host, proceed anyway (button might be in menu)
-          hostJoined = true;
-          handleHostJoined();
-        } else {
-          // Retry to check if recording button appears
-          setTimeout(() => {
-            if (!hostJoined && retryCount < MAX_RETRIES) {
-              retryCount++;
-              detectHostJoinViaDOM();
-            }
-          }, RETRY_DELAY);
-        }
+        // Retry to check if recording button appears
+        console.log('[Auto Record] Host status unclear, retrying...');
+        setTimeout(() => {
+          if (!hostJoined && retryCount < MAX_RETRIES) {
+            retryCount++;
+            detectHostJoinViaDOM();
+          } else if (retryCount >= MAX_RETRIES) {
+            console.log('[Auto Record] ❌ Max retries reached, could not detect host');
+          }
+        }, RETRY_DELAY);
       }
+    } else {
+      console.log('[Auto Record] Still on pre-join screen, retrying...');
+      setTimeout(() => {
+        if (!hostJoined && retryCount < MAX_RETRIES) {
+          retryCount++;
+          detectHostJoinViaDOM();
+        }
+      }, RETRY_DELAY);
     }
   } else {
     // Retry after delay
+    console.log('[Auto Record] No join indicators found, retrying...');
     setTimeout(() => {
       if (!hostJoined && retryCount < MAX_RETRIES) {
         retryCount++;
@@ -150,14 +206,16 @@ async function handleHostJoined() {
 
 // Start recording by clicking the recording button
 function startRecording() {
+  console.log('[Auto Record] Starting recording...');
   const recordingButton = findRecordingButton();
   
   if (recordingButton) {
     try {
+      console.log('[Auto Record] ✅ Recording button found, clicking...');
       // Click the recording button
       recordingButton.click();
       recordingStarted = true;
-      console.log('Recording button clicked successfully');
+      console.log('[Auto Record] ✅ Recording button clicked successfully');
       
       // Notify background script
       chrome.runtime.sendMessage({
@@ -165,11 +223,12 @@ function startRecording() {
         success: true
       });
     } catch (error) {
-      console.error('Error clicking recording button:', error);
+      console.error('[Auto Record] ❌ Error clicking recording button:', error);
       retryRecording();
     }
   } else {
     // Recording button not found, retry
+    console.log('[Auto Record] ⚠️ Recording button not found, retrying...');
     retryRecording();
   }
 }
