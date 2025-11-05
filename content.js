@@ -408,6 +408,18 @@ function findRecordingButton() {
     console.log('[Auto Record] Host controls button found, trying that...');
     hostControlsButton.click();
     setTimeout(() => {
+      // Look for "Manage recording" in Host controls menu
+      const manageRecordingOption = findManageRecordingOption();
+      if (manageRecordingOption) {
+        console.log('[Auto Record] ✅ Found "Manage recording" in host controls menu, clicking...');
+        manageRecordingOption.click();
+        // Wait for recording panel/slideout to appear
+        setTimeout(() => {
+          handleRecordingDialog();
+        }, 1000);
+        return manageRecordingOption;
+      }
+      // Fallback: try to find any recording button
       const recordingButton = findRecordingButtonInMenu();
       if (recordingButton) {
         console.log('[Auto Record] ✅ Found recording button in host controls menu');
