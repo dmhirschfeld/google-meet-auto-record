@@ -589,19 +589,27 @@ function handleRecordingDialog() {
     }
     
     // Find and check "Include captions in the recording" checkbox
+    console.log('[Auto Record] Looking for captions checkbox...');
     const captionsCheckbox = findCheckboxByLabel('Include captions');
     if (captionsCheckbox) {
       console.log('[Auto Record] Found captions checkbox, checking it...');
       const style = window.getComputedStyle(captionsCheckbox);
-      console.log('[Auto Record] Captions checkbox visibility:', style.display, style.visibility);
+      console.log('[Auto Record] Captions checkbox visibility:', style.display, style.visibility, 'checked:', captionsCheckbox.checked);
       
       if (!captionsCheckbox.checked) {
-        // Scroll into view first
-        captionsCheckbox.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        setTimeout(() => {
-          captionsCheckbox.click();
-          console.log('[Auto Record] ✅ Captions checkbox clicked');
-        }, 200);
+        // Try clicking the label first if it exists
+        const label = captionsCheckbox.closest('label');
+        if (label) {
+          console.log('[Auto Record] Clicking label for captions checkbox');
+          label.click();
+        } else {
+          // Scroll into view first
+          captionsCheckbox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setTimeout(() => {
+            captionsCheckbox.click();
+            console.log('[Auto Record] ✅ Captions checkbox clicked');
+          }, 200);
+        }
       } else {
         console.log('[Auto Record] Captions checkbox already checked');
       }
@@ -611,21 +619,29 @@ function handleRecordingDialog() {
     }
     
     // Find and check "Also start a transcript" checkbox
+    console.log('[Auto Record] Looking for transcript checkbox...');
     const transcriptCheckbox = findCheckboxByLabel('Also start a transcript') ||
                                findCheckboxByLabel('start a transcript') ||
                                findCheckboxByLabel('transcript');
     if (transcriptCheckbox) {
       console.log('[Auto Record] Found transcript checkbox, checking it...');
       const style = window.getComputedStyle(transcriptCheckbox);
-      console.log('[Auto Record] Transcript checkbox visibility:', style.display, style.visibility);
+      console.log('[Auto Record] Transcript checkbox visibility:', style.display, style.visibility, 'checked:', transcriptCheckbox.checked);
       
       if (!transcriptCheckbox.checked) {
-        // Scroll into view first
-        transcriptCheckbox.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        setTimeout(() => {
-          transcriptCheckbox.click();
-          console.log('[Auto Record] ✅ Transcript checkbox clicked');
-        }, 200);
+        // Try clicking the label first if it exists
+        const label = transcriptCheckbox.closest('label');
+        if (label) {
+          console.log('[Auto Record] Clicking label for transcript checkbox');
+          label.click();
+        } else {
+          // Scroll into view first
+          transcriptCheckbox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setTimeout(() => {
+            transcriptCheckbox.click();
+            console.log('[Auto Record] ✅ Transcript checkbox clicked');
+          }, 200);
+        }
       } else {
         console.log('[Auto Record] Transcript checkbox already checked');
       }
@@ -642,6 +658,14 @@ function handleRecordingDialog() {
     
     // Wait a bit for checkboxes to update, then click Start
     setTimeout(() => {
+      // Verify checkboxes were actually checked
+      const captionsCheckbox = findCheckboxByLabel('Include captions');
+      const transcriptCheckbox = findCheckboxByLabel('Also start a transcript') ||
+                                 findCheckboxByLabel('start a transcript') ||
+                                 findCheckboxByLabel('transcript');
+      
+      console.log('[Auto Record] Final checkbox status - Captions:', captionsCheckbox?.checked, 'Transcript:', transcriptCheckbox?.checked);
+      
       // First, handle consent dialog if it exists
       const consentStartButton = findConsentStartButton();
       if (consentStartButton) {
@@ -655,7 +679,7 @@ function handleRecordingDialog() {
         // No consent dialog, go straight to Start button
         clickStartRecordingButton();
       }
-    }, 600); // Increased delay for checkbox clicks to register
+    }, 800); // Increased delay for checkbox clicks to register
   };
   
   // Start processing after longer delay to let panel fully render (5+ seconds)
