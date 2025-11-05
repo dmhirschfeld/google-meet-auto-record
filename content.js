@@ -597,16 +597,33 @@ function handleRecordingDialog() {
       console.log('[Auto Record] Captions checkbox visibility:', style.display, style.visibility, 'checked:', captionsCheckbox.checked);
       
       if (!captionsCheckbox.checked) {
-        // Try clicking the label first if it exists
+        // Try multiple methods to check the checkbox
         const label = captionsCheckbox.closest('label');
         if (label) {
           console.log('[Auto Record] Clicking label for captions checkbox');
           label.click();
+          // Also try setting the property directly
+          setTimeout(() => {
+            if (!captionsCheckbox.checked) {
+              console.log('[Auto Record] Label click didn\'t work, trying direct property set');
+              captionsCheckbox.checked = true;
+              captionsCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+              captionsCheckbox.dispatchEvent(new Event('click', { bubbles: true }));
+            }
+          }, 100);
         } else {
           // Scroll into view first
           captionsCheckbox.scrollIntoView({ behavior: 'smooth', block: 'center' });
           setTimeout(() => {
             captionsCheckbox.click();
+            // Also try setting the property directly
+            setTimeout(() => {
+              if (!captionsCheckbox.checked) {
+                console.log('[Auto Record] Click didn\'t work, trying direct property set');
+                captionsCheckbox.checked = true;
+                captionsCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+              }
+            }, 100);
             console.log('[Auto Record] ✅ Captions checkbox clicked');
           }, 200);
         }
@@ -629,16 +646,33 @@ function handleRecordingDialog() {
       console.log('[Auto Record] Transcript checkbox visibility:', style.display, style.visibility, 'checked:', transcriptCheckbox.checked);
       
       if (!transcriptCheckbox.checked) {
-        // Try clicking the label first if it exists
+        // Try multiple methods to check the checkbox
         const label = transcriptCheckbox.closest('label');
         if (label) {
           console.log('[Auto Record] Clicking label for transcript checkbox');
           label.click();
+          // Also try setting the property directly
+          setTimeout(() => {
+            if (!transcriptCheckbox.checked) {
+              console.log('[Auto Record] Label click didn\'t work, trying direct property set');
+              transcriptCheckbox.checked = true;
+              transcriptCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+              transcriptCheckbox.dispatchEvent(new Event('click', { bubbles: true }));
+            }
+          }, 100);
         } else {
           // Scroll into view first
           transcriptCheckbox.scrollIntoView({ behavior: 'smooth', block: 'center' });
           setTimeout(() => {
             transcriptCheckbox.click();
+            // Also try setting the property directly
+            setTimeout(() => {
+              if (!transcriptCheckbox.checked) {
+                console.log('[Auto Record] Click didn\'t work, trying direct property set');
+                transcriptCheckbox.checked = true;
+                transcriptCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+              }
+            }, 100);
             console.log('[Auto Record] ✅ Transcript checkbox clicked');
           }, 200);
         }
