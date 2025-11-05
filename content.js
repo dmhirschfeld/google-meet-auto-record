@@ -421,28 +421,39 @@ function findRecordingButtonInMenu() {
         continue;
       }
       
-      const buttons = menu.querySelectorAll('button, [role="button"], [role="menuitem"], div[role="menuitem"]');
+      const buttons = menu.querySelectorAll('button, [role="button"], [role="menuitem"], div[role="menuitem"], span[role="button"]');
       console.log(`[Auto Record] Found ${buttons.length} items in menu`);
       
+      // Log ALL menu items for debugging
+      const allMenuItems = [];
       for (const button of buttons) {
         const ariaLabel = button.getAttribute('aria-label') || '';
         const textContent = button.textContent || '';
         const innerText = button.innerText || '';
-        const label = (ariaLabel + ' ' + textContent + ' ' + innerText).toLowerCase();
+        const title = button.getAttribute('title') || '';
+        const label = (ariaLabel + ' ' + textContent + ' ' + innerText + ' ' + title).toLowerCase();
         
-        // Log all menu items for debugging
-        if (label.includes('record') || label.includes('start') || label.includes('meeting')) {
-          console.log(`[Auto Record] Found menu item: "${ariaLabel || textContent || innerText}"`);
+        const itemText = ariaLabel || textContent || innerText || title || 'unnamed';
+        allMenuItems.push(itemText);
+        
+        // Log recording-related items
+        if (label.includes('record') || label.includes('start') || label.includes('meeting') || label.includes('capture')) {
+          console.log(`[Auto Record] ⚠️ Found relevant menu item: "${itemText}"`);
         }
         
-        // Check for recording-related text (more lenient)
-        if (label.includes('record') && 
-            !label.includes('stop') && 
-            !label.includes('end') &&
-            !label.includes('paused')) {
-          console.log('[Auto Record] ✅ Found recording button in menu:', ariaLabel || textContent || innerText);
+        // Check for recording-related text (more lenient - try multiple patterns)
+        if ((label.includes('record') && !label.includes('stop') && !label.includes('end') && !label.includes('paused')) ||
+            (label.includes('start') && label.includes('recording')) ||
+            (label.includes('start') && label.includes('meeting') && label.includes('record')) ||
+            (label.includes('meeting') && label.includes('record'))) {
+          console.log('[Auto Record] ✅ Found recording button in menu:', itemText);
           return button;
         }
+      }
+      
+      // Log all menu items if no recording button found
+      if (allMenuItems.length > 0 && allMenuItems.length < 20) {
+        console.log('[Auto Record] All menu items:', allMenuItems);
       }
     }
   }
