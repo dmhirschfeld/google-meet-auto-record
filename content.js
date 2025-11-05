@@ -323,8 +323,10 @@ function findRecordingButton() {
     // Click to open menu
     moreOptionsButton.click();
     
-    // Wait for menu to open and search again
-    setTimeout(() => {
+    // Wait for menu to open and search again - try multiple times with delays
+    let menuCheckAttempts = 0;
+    const checkMenu = () => {
+      menuCheckAttempts++;
       const recordingButton = findRecordingButtonInMenu();
       if (recordingButton) {
         console.log('[Auto Record] ✅ Found recording button in menu, clicking...');
@@ -335,10 +337,37 @@ function findRecordingButton() {
           success: true
         });
         return recordingButton;
+      } else if (menuCheckAttempts < 5) {
+        // Retry checking menu after delay (menu might be animating)
+        setTimeout(checkMenu, 500);
       } else {
-        console.log('[Auto Record] ⚠️ Recording button not found in menu');
+        console.log('[Auto Record] ⚠️ Recording button not found in menu after multiple attempts');
       }
-    }, 1000); // Increased timeout for menu to open
+    };
+    
+    // Start checking after initial delay
+    setTimeout(checkMenu, 1000);
+  }
+  
+  // Also try "Host controls" menu if it exists
+  const hostControlsButton = document.querySelector('[aria-label*="Host controls"]') ||
+                            document.querySelector('[data-tooltip*="Host controls"]');
+  if (hostControlsButton) {
+    console.log('[Auto Record] Host controls button found, trying that...');
+    hostControlsButton.click();
+    setTimeout(() => {
+      const recordingButton = findRecordingButtonInMenu();
+      if (recordingButton) {
+        console.log('[Auto Record] ✅ Found recording button in host controls menu');
+        recordingButton.click();
+        recordingStarted = true;
+        chrome.runtime.sendMessage({
+          action: 'recordingStarted',
+          success: true
+        });
+        return recordingButton;
+      }
+    }, 1000);
   }
 
   console.log('[Auto Record] ❌ Recording button not found');
@@ -367,6 +396,8 @@ function findMoreOptionsButton() {
 
 // Find recording button in menu
 function findRecordingButtonInMenu() {
+  console.log('[Auto Record] Searching in menu...');
+  
   // Search in the opened menu - try multiple menu selectors
   const menuSelectors = [
     '[role="menu"]',
@@ -374,22 +405,42 @@ function findRecordingButtonInMenu() {
     '[jsname="b3VHJd"]',
     '[aria-label*="More options"]',
     'div[role="menu"]',
-    'ul[role="menu"]'
+    'ul[role="menu"]',
+    '[role="dialog"]', // Some menus use dialog
+    '[role="list"]' // Some menus use list
   ];
   
   for (const menuSelector of menuSelectors) {
-    const menu = document.querySelector(menuSelector);
-    if (menu) {
-      const buttons = menu.querySelectorAll('button, [role="button"], [role="menuitem"]');
+    const menus = document.querySelectorAll(menuSelector);
+    console.log(`[Auto Record] Found ${menus.length} menus with selector: ${menuSelector}`);
+    
+    for (const menu of menus) {
+      // Check if menu is visible
+      const style = window.getComputedStyle(menu);
+      if (style.display === 'none' || style.visibility === 'hidden') {
+        continue;
+      }
+      
+      const buttons = menu.querySelectorAll('button, [role="button"], [role="menuitem"], div[role="menuitem"]');
+      console.log(`[Auto Record] Found ${buttons.length} items in menu`);
+      
       for (const button of buttons) {
         const ariaLabel = button.getAttribute('aria-label') || '';
         const textContent = button.textContent || '';
-        const label = (ariaLabel + ' ' + textContent).toLowerCase();
+        const innerText = button.innerText || '';
+        const label = (ariaLabel + ' ' + textContent + ' ' + innerText).toLowerCase();
         
-        // Check for recording-related text
-        if ((label.includes('record') && label.includes('start')) ||
-            (label.includes('record') && !label.includes('stop') && !label.includes('end'))) {
-          console.log('Found recording button in menu:', ariaLabel || textContent);
+        // Log all menu items for debugging
+        if (label.includes('record') || label.includes('start') || label.includes('meeting')) {
+          console.log(`[Auto Record] Found menu item: "${ariaLabel || textContent || innerText}"`);
+        }
+        
+        // Check for recording-related text (more lenient)
+        if (label.includes('record') && 
+            !label.includes('stop') && 
+            !label.includes('end') &&
+            !label.includes('paused')) {
+          console.log('[Auto Record] ✅ Found recording button in menu:', ariaLabel || textContent || innerText);
           return button;
         }
       }
