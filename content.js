@@ -583,37 +583,40 @@ function handleRecordingDialog() {
     
     // Find and check "Include captions in the recording" checkbox
     console.log('[Auto Record] Looking for captions checkbox...');
-    const captionsCheckbox = findCheckboxByLabel('Include captions');
+    // Try finding by ID first, then by label
+    let captionsCheckbox = document.getElementById('c181');
+    let captionsWrapper = null;
     if (captionsCheckbox) {
-      console.log('[Auto Record] Found captions checkbox, checking it...');
-      const style = window.getComputedStyle(captionsCheckbox);
-      console.log('[Auto Record] Captions checkbox visibility:', style.display, style.visibility, 'checked:', captionsCheckbox.checked);
+      captionsWrapper = captionsCheckbox.closest('div[jsname="d9LF6c"]');
+      console.log('[Auto Record] Found captions checkbox by ID');
+    } else {
+      captionsCheckbox = findCheckboxByLabel('Include captions');
+    }
+    
+    if (captionsCheckbox || captionsWrapper) {
+      const checkbox = captionsCheckbox || document.getElementById('c181');
+      const wrapper = captionsWrapper || checkbox?.closest('div[jsname="d9LF6c"]');
       
-      if (!captionsCheckbox.checked) {
-        // Try clicking the checkbox directly first
-        captionsCheckbox.click();
-        console.log('[Auto Record] Clicked captions checkbox');
+      console.log('[Auto Record] Found captions checkbox, checking it...');
+      const checked = checkbox?.checked || false;
+      console.log('[Auto Record] Captions checkbox checked:', checked);
+      
+      if (!checked) {
+        // Click the wrapper div which has the jsaction handlers
+        if (wrapper) {
+          console.log('[Auto Record] Clicking captions wrapper div');
+          wrapper.click();
+        } else if (checkbox) {
+          console.log('[Auto Record] Clicking captions checkbox directly');
+          checkbox.click();
+        }
         
-        // Wait and verify, then try other methods if needed
-        setTimeout(() => {
-          if (!captionsCheckbox.checked) {
-            console.log('[Auto Record] Direct click didn\'t work, trying label click');
-            const label = captionsCheckbox.closest('label');
-            if (label) {
-              label.click();
-            }
-            
-            // If still not checked, set property directly
-            setTimeout(() => {
-              if (!captionsCheckbox.checked) {
-                console.log('[Auto Record] Setting captions checkbox property directly');
-                captionsCheckbox.checked = true;
-                captionsCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
-                captionsCheckbox.dispatchEvent(new Event('input', { bubbles: true }));
-              }
-            }, 100);
-          }
-        }, 150);
+        // Also click the label
+        const label = document.querySelector('label[for="c181"]');
+        if (label) {
+          console.log('[Auto Record] Clicking captions label');
+          label.click();
+        }
       } else {
         console.log('[Auto Record] Captions checkbox already checked');
       }
@@ -624,39 +627,42 @@ function handleRecordingDialog() {
     
     // Find and check "Also start a transcript" checkbox
     console.log('[Auto Record] Looking for transcript checkbox...');
-    const transcriptCheckbox = findCheckboxByLabel('Also start a transcript') ||
-                               findCheckboxByLabel('start a transcript') ||
-                               findCheckboxByLabel('transcript');
+    // Try finding by ID first, then by label
+    let transcriptCheckbox = document.getElementById('c182');
+    let transcriptWrapper = null;
     if (transcriptCheckbox) {
-      console.log('[Auto Record] Found transcript checkbox, checking it...');
-      const style = window.getComputedStyle(transcriptCheckbox);
-      console.log('[Auto Record] Transcript checkbox visibility:', style.display, style.visibility, 'checked:', transcriptCheckbox.checked);
+      transcriptWrapper = transcriptCheckbox.closest('div[jsname="AXUMc"]');
+      console.log('[Auto Record] Found transcript checkbox by ID');
+    } else {
+      transcriptCheckbox = findCheckboxByLabel('Also start a transcript') ||
+                           findCheckboxByLabel('start a transcript') ||
+                           findCheckboxByLabel('transcript');
+    }
+    
+    if (transcriptCheckbox || transcriptWrapper) {
+      const checkbox = transcriptCheckbox || document.getElementById('c182');
+      const wrapper = transcriptWrapper || checkbox?.closest('div[jsname="AXUMc"]');
       
-      if (!transcriptCheckbox.checked) {
-        // Try clicking the checkbox directly first
-        transcriptCheckbox.click();
-        console.log('[Auto Record] Clicked transcript checkbox');
+      console.log('[Auto Record] Found transcript checkbox, checking it...');
+      const checked = checkbox?.checked || false;
+      console.log('[Auto Record] Transcript checkbox checked:', checked);
+      
+      if (!checked) {
+        // Click the wrapper div which has the jsaction handlers
+        if (wrapper) {
+          console.log('[Auto Record] Clicking transcript wrapper div');
+          wrapper.click();
+        } else if (checkbox) {
+          console.log('[Auto Record] Clicking transcript checkbox directly');
+          checkbox.click();
+        }
         
-        // Wait and verify, then try other methods if needed
-        setTimeout(() => {
-          if (!transcriptCheckbox.checked) {
-            console.log('[Auto Record] Direct click didn\'t work, trying label click');
-            const label = transcriptCheckbox.closest('label');
-            if (label) {
-              label.click();
-            }
-            
-            // If still not checked, set property directly
-            setTimeout(() => {
-              if (!transcriptCheckbox.checked) {
-                console.log('[Auto Record] Setting transcript checkbox property directly');
-                transcriptCheckbox.checked = true;
-                transcriptCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
-                transcriptCheckbox.dispatchEvent(new Event('input', { bubbles: true }));
-              }
-            }, 100);
-          }
-        }, 150);
+        // Also click the label
+        const label = document.querySelector('label[for="c182"]');
+        if (label) {
+          console.log('[Auto Record] Clicking transcript label');
+          label.click();
+        }
       } else {
         console.log('[Auto Record] Transcript checkbox already checked');
       }
@@ -666,18 +672,16 @@ function handleRecordingDialog() {
       
       // Retry once if not found
       if (dialogAttempts === 1) {
-        setTimeout(processDialog, 2000);
+        setTimeout(processDialog, 500);
         return;
       }
     }
     
-    // Wait a bit for checkboxes to update, then click Start
+    // Wait briefly for checkboxes to register, then click Start immediately
     setTimeout(() => {
       // Verify checkboxes were actually checked
-      const captionsCheckbox = findCheckboxByLabel('Include captions');
-      const transcriptCheckbox = findCheckboxByLabel('Also start a transcript') ||
-                                 findCheckboxByLabel('start a transcript') ||
-                                 findCheckboxByLabel('transcript');
+      const captionsCheckbox = document.getElementById('c181');
+      const transcriptCheckbox = document.getElementById('c182');
       
       console.log('[Auto Record] Final checkbox status - Captions:', captionsCheckbox?.checked, 'Transcript:', transcriptCheckbox?.checked);
       
@@ -686,15 +690,15 @@ function handleRecordingDialog() {
       if (consentStartButton) {
         console.log('[Auto Record] Found consent dialog Start button, clicking...');
         consentStartButton.click();
-        // After clicking consent, wait and then click the main Start button
+        // After clicking consent, wait briefly and then click the main Start button
         setTimeout(() => {
           clickStartRecordingButton();
-        }, 500);
+        }, 300);
       } else {
         // No consent dialog, go straight to Start button
         clickStartRecordingButton();
       }
-    }, 800); // Increased delay for checkbox clicks to register
+    }, 300); // Reduced delay - checkboxes should register quickly
   };
   
   // Start processing after short delay - panel appears quickly
