@@ -417,6 +417,10 @@ function findRecordingButton() {
     }, 1000);
   }
 
+  console.log('[Auto Record] ❌ Recording button not found');
+  return null;
+}
+
 // Find Recording option in Meeting Tools menu
 function findRecordingInMeetingTools() {
   console.log('[Auto Record] Searching for Recording in Meeting Tools...');
