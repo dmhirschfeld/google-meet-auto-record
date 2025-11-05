@@ -521,28 +521,35 @@ function findRecordingInMeetingTools() {
 function handleRecordingDialog() {
   console.log('[Auto Record] Handling recording dialog...');
   
-  // Wait for recording panel/slideout to fully appear (may take longer)
+  // Wait longer for recording panel/slideout to fully appear (it can take 5+ seconds)
   let dialogAttempts = 0;
   const processDialog = () => {
     dialogAttempts++;
     console.log(`[Auto Record] Processing dialog (attempt ${dialogAttempts})...`);
     
-    // Check if recording panel is visible by looking for "Record your video call" text
+    // Check if recording panel is visible by looking for "Record your video call" or "Start recording" text
     const recordingPanel = document.querySelector('[role="dialog"]') || 
                           document.querySelector('[role="complementary"]') ||
                           document.querySelector('div[class*="sidebar"]') ||
                           document.querySelector('div[class*="panel"]');
     
+    const panelText = (recordingPanel ? (recordingPanel.textContent || recordingPanel.innerText || '') : '').toLowerCase();
     const hasRecordingPanel = recordingPanel && 
-      (recordingPanel.textContent || recordingPanel.innerText || '').toLowerCase().includes('record');
+      (panelText.includes('record') || panelText.includes('captions') || panelText.includes('transcript'));
     
-    if (!hasRecordingPanel && dialogAttempts === 1) {
-      console.log('[Auto Record] Recording panel not visible yet, waiting...');
-      setTimeout(processDialog, 1000);
+    // Also check for Start recording button as indicator
+    const startButton = findStartRecordingButton();
+    const hasStartButton = !!startButton;
+    
+    console.log('[Auto Record] Panel found:', !!recordingPanel, 'Has start button:', hasStartButton);
+    
+    if ((!hasRecordingPanel || !hasStartButton) && dialogAttempts === 1) {
+      console.log('[Auto Record] Recording panel not fully loaded yet, waiting longer...');
+      setTimeout(processDialog, 2000); // Wait 2 more seconds
       return;
     }
     
-    if (!hasRecordingPanel) {
+    if (!hasRecordingPanel && !hasStartButton) {
       console.log('[Auto Record] ⚠️ Recording panel not found after retry');
       return;
     }
@@ -551,14 +558,22 @@ function handleRecordingDialog() {
     const captionsCheckbox = findCheckboxByLabel('Include captions');
     if (captionsCheckbox) {
       console.log('[Auto Record] Found captions checkbox, checking it...');
+      const style = window.getComputedStyle(captionsCheckbox);
+      console.log('[Auto Record] Captions checkbox visibility:', style.display, style.visibility);
+      
       if (!captionsCheckbox.checked) {
-        captionsCheckbox.click();
-        console.log('[Auto Record] ✅ Captions checkbox clicked');
+        // Scroll into view first
+        captionsCheckbox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => {
+          captionsCheckbox.click();
+          console.log('[Auto Record] ✅ Captions checkbox clicked');
+        }, 200);
       } else {
         console.log('[Auto Record] Captions checkbox already checked');
       }
     } else {
       console.log('[Auto Record] ⚠️ Captions checkbox not found');
+      logAllCheckboxes();
     }
     
     // Find and check "Also start a transcript" checkbox
@@ -567,29 +582,26 @@ function handleRecordingDialog() {
                                findCheckboxByLabel('transcript');
     if (transcriptCheckbox) {
       console.log('[Auto Record] Found transcript checkbox, checking it...');
+      const style = window.getComputedStyle(transcriptCheckbox);
+      console.log('[Auto Record] Transcript checkbox visibility:', style.display, style.visibility);
+      
       if (!transcriptCheckbox.checked) {
-        transcriptCheckbox.click();
-        console.log('[Auto Record] ✅ Transcript checkbox clicked');
+        // Scroll into view first
+        transcriptCheckbox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => {
+          transcriptCheckbox.click();
+          console.log('[Auto Record] ✅ Transcript checkbox clicked');
+        }, 200);
       } else {
         console.log('[Auto Record] Transcript checkbox already checked');
       }
     } else {
-      console.log('[Auto Record] ⚠️ Transcript checkbox not found, retrying...');
-      // Log all checkboxes for debugging
-      const allCheckboxes = document.querySelectorAll('input[type="checkbox"]');
-      console.log(`[Auto Record] Found ${allCheckboxes.length} checkboxes total`);
-      for (let i = 0; i < allCheckboxes.length; i++) {
-        const cb = allCheckboxes[i];
-        const label = cb.closest('label');
-        const labelText = label ? (label.textContent || label.innerText || '') : '';
-        const ariaLabel = cb.getAttribute('aria-label') || '';
-        const style = window.getComputedStyle(cb);
-        console.log(`[Auto Record] Checkbox ${i}: checked=${cb.checked}, visible=${style.display !== 'none'}, label="${labelText}", aria-label="${ariaLabel}"`);
-      }
+      console.log('[Auto Record] ⚠️ Transcript checkbox not found');
+      logAllCheckboxes();
       
       // Retry once if not found
       if (dialogAttempts === 1) {
-        setTimeout(processDialog, 1000);
+        setTimeout(processDialog, 2000);
         return;
       }
     }
@@ -609,11 +621,37 @@ function handleRecordingDialog() {
         // No consent dialog, go straight to Start button
         clickStartRecordingButton();
       }
-    }, 400);
+    }, 600); // Increased delay for checkbox clicks to register
   };
   
-  // Start processing after initial delay to let panel render
-  setTimeout(processDialog, 1000);
+  // Start processing after longer delay to let panel fully render (5+ seconds)
+  setTimeout(processDialog, 2500); // Wait 2.5 seconds initially
+  setTimeout(() => processDialog(), 5000); // Retry after 5 seconds if first attempt failed
+}
+
+// Helper function to log all checkboxes for debugging
+function logAllCheckboxes() {
+  const allCheckboxes = document.querySelectorAll('input[type="checkbox"]');
+  console.log(`[Auto Record] Found ${allCheckboxes.length} checkboxes total`);
+  for (let i = 0; i < allCheckboxes.length; i++) {
+    const cb = allCheckboxes[i];
+    const label = cb.closest('label');
+    const labelText = label ? (label.textContent || label.innerText || '').trim() : '';
+    const ariaLabel = cb.getAttribute('aria-label') || '';
+    const ariaLabelledBy = cb.getAttribute('aria-labelledby');
+    let labelledByText = '';
+    if (ariaLabelledBy) {
+      const labelEl = document.getElementById(ariaLabelledBy);
+      if (labelEl) {
+        labelledByText = (labelEl.textContent || labelEl.innerText || '').trim();
+      }
+    }
+    const style = window.getComputedStyle(cb);
+    const rect = cb.getBoundingClientRect();
+    console.log(`[Auto Record] Checkbox ${i}: checked=${cb.checked}, visible=${style.display !== 'none' && style.visibility !== 'hidden'}, ` +
+                `display=${style.display}, position=(${rect.left},${rect.top}), ` +
+                `label="${labelText}", aria-label="${ariaLabel}", aria-labelledby="${labelledByText}"`);
+  }
 }
 
 // Find checkbox by label text (more comprehensive search)
@@ -621,19 +659,29 @@ function findCheckboxByLabel(labelText) {
   const checkboxes = document.querySelectorAll('input[type="checkbox"]');
   const searchText = labelText.toLowerCase();
   
+  // First, try to find visible checkboxes
+  const visibleCheckboxes = [];
   for (const checkbox of checkboxes) {
-    // Check if checkbox is visible
     const style = window.getComputedStyle(checkbox);
-    if (style.display === 'none' || style.visibility === 'hidden') {
-      continue;
+    const rect = checkbox.getBoundingClientRect();
+    // Check if checkbox is visible (not hidden, has dimensions)
+    if (style.display !== 'none' && 
+        style.visibility !== 'hidden' &&
+        rect.width > 0 && 
+        rect.height > 0) {
+      visibleCheckboxes.push(checkbox);
     }
-    
+  }
+  
+  console.log(`[Auto Record] Searching for "${labelText}" in ${visibleCheckboxes.length} visible checkboxes`);
+  
+  for (const checkbox of visibleCheckboxes) {
     // Check the label associated with this checkbox
     const label = checkbox.closest('label');
     if (label) {
       const labelTextContent = (label.textContent || label.innerText || '').toLowerCase();
       if (labelTextContent.includes(searchText)) {
-        console.log(`[Auto Record] Found checkbox by label: "${labelTextContent}"`);
+        console.log(`[Auto Record] Found checkbox by label: "${labelTextContent.substring(0, 50)}"`);
         return checkbox;
       }
     }
@@ -652,7 +700,7 @@ function findCheckboxByLabel(labelText) {
       if (labelElement) {
         const labelTextContent = (labelElement.textContent || labelElement.innerText || '').toLowerCase();
         if (labelTextContent.includes(searchText)) {
-          console.log(`[Auto Record] Found checkbox by aria-labelledby: "${labelTextContent}"`);
+          console.log(`[Auto Record] Found checkbox by aria-labelledby: "${labelTextContent.substring(0, 50)}"`);
           return checkbox;
         }
       }
@@ -661,16 +709,17 @@ function findCheckboxByLabel(labelText) {
     // Check parent elements for label text (more thorough)
     let parent = checkbox.parentElement;
     let depth = 0;
-    while (parent && depth < 8) {
+    while (parent && depth < 10) {
       const parentText = (parent.textContent || parent.innerText || '').toLowerCase();
       // Check if parent contains the label text
       if (parentText.includes(searchText)) {
-        // Also check if there's a span or div nearby with the text
-        const nearbyText = parent.querySelector('span, div, p');
-        if (nearbyText) {
-          const nearbyTextContent = (nearbyText.textContent || nearbyText.innerText || '').toLowerCase();
-          if (nearbyTextContent.includes(searchText)) {
-            console.log(`[Auto Record] Found checkbox by parent text: "${nearbyTextContent}"`);
+        // Make sure we're not matching something too generic
+        // Check if there's a more specific text element nearby
+        const textElements = parent.querySelectorAll('span, div, p, label');
+        for (const textEl of textElements) {
+          const textContent = (textEl.textContent || textEl.innerText || '').toLowerCase();
+          if (textContent.includes(searchText) && textContent.length < 200) {
+            console.log(`[Auto Record] Found checkbox by parent text element: "${textContent.substring(0, 50)}"`);
             return checkbox;
           }
         }
@@ -681,12 +730,21 @@ function findCheckboxByLabel(labelText) {
       depth++;
     }
     
-    // Check sibling elements
+    // Check sibling elements (including previous siblings)
     const nextSibling = checkbox.nextElementSibling;
     if (nextSibling) {
       const siblingText = (nextSibling.textContent || nextSibling.innerText || '').toLowerCase();
       if (siblingText.includes(searchText)) {
-        console.log(`[Auto Record] Found checkbox by sibling text: "${siblingText}"`);
+        console.log(`[Auto Record] Found checkbox by next sibling: "${siblingText.substring(0, 50)}"`);
+        return checkbox;
+      }
+    }
+    
+    const prevSibling = checkbox.previousElementSibling;
+    if (prevSibling) {
+      const siblingText = (prevSibling.textContent || prevSibling.innerText || '').toLowerCase();
+      if (siblingText.includes(searchText)) {
+        console.log(`[Auto Record] Found checkbox by previous sibling: "${siblingText.substring(0, 50)}"`);
         return checkbox;
       }
     }
