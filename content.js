@@ -797,6 +797,7 @@ function handleRecordingDialog() {
       
       console.log('[Auto Record] Final checkbox status - Captions:', captionsCheckbox?.checked, 'Transcript:', transcriptCheckbox?.checked);
       
+      
       // First, handle consent dialog if it exists
       const consentStartButton = findConsentStartButton();
       if (consentStartButton) {
