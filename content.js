@@ -362,7 +362,7 @@ function findRecordingButton() {
     setTimeout(checkMenu, 1000);
   }
   
-  // Try "Activities" menu (opens Meeting Tools)
+  // Try "Activities" menu (opens Meeting Tools) - this is the primary method
   const activitiesButton = document.querySelector('[aria-label*="Activities"]') ||
                           document.querySelector('[data-tooltip*="Activities"]') ||
                           document.querySelector('button[aria-label*="activities" i]');
@@ -371,7 +371,10 @@ function findRecordingButton() {
     activitiesButton.click();
     
     // Wait for Meeting Tools menu to open and find Recording
-    setTimeout(() => {
+    // Try multiple times as menu might take time to render
+    let meetingToolsAttempts = 0;
+    const checkMeetingTools = () => {
+      meetingToolsAttempts++;
       const recordingOption = findRecordingInMeetingTools();
       if (recordingOption) {
         console.log('[Auto Record] ✅ Found Recording option in Meeting Tools, clicking...');
@@ -381,8 +384,16 @@ function findRecordingButton() {
         setTimeout(() => {
           handleRecordingDialog();
         }, 1000);
+      } else if (meetingToolsAttempts < 5) {
+        // Retry after delay
+        setTimeout(checkMeetingTools, 500);
+      } else {
+        console.log('[Auto Record] ⚠️ Recording option not found in Meeting Tools after multiple attempts');
       }
-    }, 1000);
+    };
+    
+    setTimeout(checkMeetingTools, 1000);
+    return null; // Return early since we're handling this path
   }
   
   // Also try "Host controls" menu if it exists
@@ -410,41 +421,49 @@ function findRecordingButton() {
 function findRecordingInMeetingTools() {
   console.log('[Auto Record] Searching for Recording in Meeting Tools...');
   
-  // Look for "Recording" text in menus/dialogs
-  const selectors = [
-    // Look for text containing "Recording"
-    '*[aria-label*="Recording"]',
-    '*[aria-label*="recording"]',
-    '*:has-text("Recording")',
-    '*:has-text("recording")',
-    'div:has-text("Recording")',
-    'button:has-text("Recording")',
-    '[role="button"]:has-text("Recording")',
-    '[role="menuitem"]:has-text("Recording")'
-  ];
-  
-  // First try to find by text content
-  const allElements = document.querySelectorAll('div, button, [role="button"], [role="menuitem"]');
+  // Look for elements with "Recording" text
+  const allElements = document.querySelectorAll('div, button, [role="button"], [role="menuitem"], span, [data-value]');
   for (const element of allElements) {
     const text = (element.textContent || element.innerText || '').trim();
     const ariaLabel = element.getAttribute('aria-label') || '';
+    const title = element.getAttribute('title') || '';
     
-    // Check if it's the Recording option in Meeting Tools
-    if ((text.toLowerCase().includes('recording') && 
-         text.toLowerCase().includes('meeting')) ||
-        (ariaLabel.toLowerCase().includes('recording') &&
-         ariaLabel.toLowerCase().includes('meeting'))) {
-      console.log('[Auto Record] ✅ Found Recording option:', text || ariaLabel);
-      return element;
+    // Check if it contains "Recording" (case insensitive)
+    const fullText = (text + ' ' + ariaLabel + ' ' + title).toLowerCase();
+    
+    if (fullText.includes('recording')) {
+      // Make sure it's clickable and visible
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      
+      if (style.display !== 'none' && 
+          style.visibility !== 'hidden' &&
+          rect.width > 0 && 
+          rect.height > 0) {
+        console.log('[Auto Record] ✅ Found Recording option:', text || ariaLabel || title);
+        // Try to find the clickable parent if this is a text element
+        if (element.tagName === 'SPAN' || element.tagName === 'DIV') {
+          const clickable = element.closest('button, [role="button"], [role="menuitem"]');
+          if (clickable) {
+            return clickable;
+          }
+        }
+        return element;
+      }
     }
-    
-    // Also check for just "Recording" text
-    if (text === 'Recording' || ariaLabel === 'Recording') {
-      console.log('[Auto Record] ✅ Found Recording option:', text || ariaLabel);
+  }
+  
+  // Also try aria-label selectors
+  const ariaElements = document.querySelectorAll('[aria-label*="Recording" i], [aria-label*="recording"]');
+  for (const element of ariaElements) {
+    const style = window.getComputedStyle(element);
+    if (style.display !== 'none' && style.visibility !== 'hidden') {
+      console.log('[Auto Record] ✅ Found Recording option by aria-label:', element.getAttribute('aria-label'));
       return element;
     }
   }
   
+  console.log('[Auto Record] ⚠️ Recording option not found in Meeting Tools');
   return null;
 }
 
