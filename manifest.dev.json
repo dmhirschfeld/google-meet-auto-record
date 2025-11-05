@@ -1,0 +1,50 @@
+{
+    "manifest_version":  3,
+    "name":  "Google Meet Auto Record",
+    "version":  "0.1.0",
+    "description":  "Automatically starts recording when the host joins a Google Meet session",
+    "permissions":  [
+                        "identity",
+                        "activeTab",
+                        "tabs",
+                        "scripting",
+                        "storage"
+                    ],
+    "host_permissions":  [
+                             "https://meet.google.com/*",
+                             "https://www.googleapis.com/*"
+                         ],
+    "background":  {
+                       "service_worker":  "background.js"
+                   },
+    "content_scripts":  [
+                            {
+                                "matches":  [
+                                                "https://meet.google.com/*"
+                                            ],
+                                "js":  [
+                                           "content.js"
+                                       ],
+                                "run_at":  "document_idle"
+                            }
+                        ],
+    "action":  {
+                   "default_popup":  "popup.html",
+                   "default_icon":  {
+                                        "16":  "icon16.png",
+                                        "48":  "icon48.png",
+                                        "128":  "icon128.png"
+                                    }
+               },
+    "oauth2":  {
+                   "client_id":  "24735518815-8lse7s589gt3afro7270gnoq4ep45s0b.apps.googleusercontent.com",
+                   "scopes":  [
+                                  "https://www.googleapis.com/auth/meetings.space.readonly"
+                              ]
+               },
+    "icons":  {
+                  "16":  "icon16.png",
+                  "48":  "icon48.png",
+                  "128":  "icon128.png"
+              }
+}
