@@ -565,8 +565,8 @@ function handleRecordingDialog() {
       (panelText.includes('record') || panelText.includes('captions') || panelText.includes('transcript'));
     
     // Also check for Start recording button as indicator
-    const startButton = findStartRecordingButton();
-    const hasStartButton = !!startButton;
+    const startButton = clickStartRecordingButton();
+    const hasStartButton = startButton !== false;
     
     console.log('[Auto Record] Panel found:', !!recordingPanel, 'Has start button:', hasStartButton);
     
