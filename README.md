@@ -31,7 +31,19 @@ A Chrome extension that automatically starts recording when the host joins a Goo
    
    Both APIs are needed for the extension to work properly.
 
-### 2. OAuth 2.0 Configuration
+### 2. OAuth Consent Screen Configuration
+
+1. Navigate to **APIs & Services** > **OAuth consent screen**
+2. Configure the consent screen:
+   - Choose **Internal** (for Google Workspace users) or **External** (for public use)
+   - Fill in required fields (App name, User support email, Developer contact)
+3. Add the following **Scopes** (click "Add or Remove Scopes"):
+   - `https://www.googleapis.com/auth/chat.meetingspace.readonly`
+   - `https://www.googleapis.com/auth/meetings.space.readonly`
+   - `https://www.googleapis.com/auth/workspace.events`
+4. Click **Save and Continue** through the remaining steps
+
+### 3. OAuth 2.0 Credentials Configuration
 
 1. Navigate to **APIs & Services** > **Credentials**
 2. Click **Create Credentials** > **OAuth client ID**
@@ -40,22 +52,22 @@ A Chrome extension that automatically starts recording when the host joins a Goo
    ```
    https://<extension-id>.chromiumapp.org/
    ```
-   Note: You'll need to get your extension ID after loading the extension (see step 4 below)
+   Note: You'll need to get your extension ID after loading the extension (see step 5 below)
 
-### 3. Configure Extension
+### 4. Configure Extension
 
 1. Open `manifest.json`
 2. Replace `YOUR_CLIENT_ID.apps.googleusercontent.com` with your actual OAuth client ID from Google Cloud Console
 3. Save the file
 
-### 4. Icon Files
+### 5. Icon Files
 
 The extension requires icon files (icon16.png, icon48.png, icon128.png). You can:
 - Create your own icons (16x16, 48x48, and 128x128 pixels)
 - Use placeholder icons temporarily
 - Remove the icon references from `manifest.json` if you don't need them
 
-### 5. Load Extension in Chrome
+### 6. Load Extension in Chrome
 
 1. Open Chrome and navigate to `chrome://extensions/`
 2. Enable **Developer mode** (toggle in top right)
@@ -64,7 +76,7 @@ The extension requires icon files (icon16.png, icon48.png, icon128.png). You can
 5. Copy your extension ID from the extensions page (format: `abcdefghijklmnopqrstuvwxyz123456`)
 6. Go back to Google Cloud Console and update the redirect URI with your actual extension ID
 
-### 6. Authentication
+### 7. Authentication
 
 1. Click the extension icon in Chrome toolbar
 2. Click **Authenticate with Google**
