@@ -601,39 +601,87 @@ function handleRecordingDialog() {
     
     // Find and check "Include captions in the recording" checkbox
     console.log('[Auto Record] Looking for captions checkbox...');
-    // Try finding by ID first, then by label
-    let captionsCheckbox = document.getElementById('c181');
-    let captionsWrapper = null;
-    if (captionsCheckbox) {
-      captionsWrapper = captionsCheckbox.closest('div[jsname="d9LF6c"]');
-      console.log('[Auto Record] Found captions checkbox by ID');
+    
+    // Try multiple methods to find the checkbox
+    // 1. Find by wrapper div jsname
+    let captionsWrapper = document.querySelector('div[jsname="d9LF6c"]');
+    let captionsCheckbox = null;
+    let captionsLabel = null;
+    
+    if (captionsWrapper) {
+      captionsCheckbox = captionsWrapper.querySelector('input[type="checkbox"]');
+      console.log('[Auto Record] Found captions wrapper by jsname');
     } else {
-      captionsCheckbox = findCheckboxByLabel('Include captions');
+      // 2. Find by label text, then find associated checkbox
+      const labels = document.querySelectorAll('label');
+      for (const label of labels) {
+        const labelText = (label.textContent || label.innerText || '').toLowerCase();
+        if (labelText.includes('include captions')) {
+          captionsLabel = label;
+          const forId = label.getAttribute('for');
+          if (forId) {
+            captionsCheckbox = document.getElementById(forId);
+          }
+          if (!captionsCheckbox) {
+            captionsCheckbox = label.querySelector('input[type="checkbox"]');
+          }
+          if (!captionsCheckbox) {
+            captionsWrapper = label.closest('div[jsname="d9LF6c"]');
+            if (captionsWrapper) {
+              captionsCheckbox = captionsWrapper.querySelector('input[type="checkbox"]');
+            }
+          }
+          console.log('[Auto Record] Found captions checkbox by label text');
+          break;
+        }
+      }
+    }
+    
+    // If still not found, try searching all checkboxes
+    if (!captionsCheckbox && !captionsWrapper) {
+      const allCheckboxes = document.querySelectorAll('input[type="checkbox"]');
+      for (const cb of allCheckboxes) {
+        const label = cb.closest('label') || document.querySelector(`label[for="${cb.id}"]`);
+        if (label) {
+          const labelText = (label.textContent || label.innerText || '').toLowerCase();
+          if (labelText.includes('include captions')) {
+            captionsCheckbox = cb;
+            captionsLabel = label;
+            captionsWrapper = cb.closest('div[jsname]');
+            console.log('[Auto Record] Found captions checkbox by searching all checkboxes');
+            break;
+          }
+        }
+      }
     }
     
     if (captionsCheckbox || captionsWrapper) {
-      const checkbox = captionsCheckbox || document.getElementById('c181');
-      const wrapper = captionsWrapper || checkbox?.closest('div[jsname="d9LF6c"]');
+      const checkbox = captionsCheckbox || captionsWrapper?.querySelector('input[type="checkbox"]');
+      const wrapper = captionsWrapper || checkbox?.closest('div[jsname]');
+      const label = captionsLabel || document.querySelector(`label[for="${checkbox?.id}"]`) || checkbox?.closest('label');
       
-      console.log('[Auto Record] Found captions checkbox, checking it...');
+      console.log('[Auto Record] Found captions checkbox:', !!checkbox, 'wrapper:', !!wrapper, 'label:', !!label);
       const checked = checkbox?.checked || false;
       console.log('[Auto Record] Captions checkbox checked:', checked);
       
       if (!checked) {
-        // Click the wrapper div which has the jsaction handlers
+        // Try clicking wrapper first (has jsaction handlers)
         if (wrapper) {
           console.log('[Auto Record] Clicking captions wrapper div');
           wrapper.click();
+          // Also try clicking label
+          setTimeout(() => {
+            if (label && !checkbox?.checked) {
+              console.log('[Auto Record] Clicking captions label');
+              label.click();
+            }
+          }, 50);
+        } else if (label) {
+          console.log('[Auto Record] Clicking captions label');
+          label.click();
         } else if (checkbox) {
           console.log('[Auto Record] Clicking captions checkbox directly');
           checkbox.click();
-        }
-        
-        // Also click the label
-        const label = document.querySelector('label[for="c181"]');
-        if (label) {
-          console.log('[Auto Record] Clicking captions label');
-          label.click();
         }
       } else {
         console.log('[Auto Record] Captions checkbox already checked');
@@ -645,41 +693,87 @@ function handleRecordingDialog() {
     
     // Find and check "Also start a transcript" checkbox
     console.log('[Auto Record] Looking for transcript checkbox...');
-    // Try finding by ID first, then by label
-    let transcriptCheckbox = document.getElementById('c182');
-    let transcriptWrapper = null;
-    if (transcriptCheckbox) {
-      transcriptWrapper = transcriptCheckbox.closest('div[jsname="AXUMc"]');
-      console.log('[Auto Record] Found transcript checkbox by ID');
+    
+    // Try multiple methods to find the checkbox
+    // 1. Find by wrapper div jsname
+    let transcriptWrapper = document.querySelector('div[jsname="AXUMc"]');
+    let transcriptCheckbox = null;
+    let transcriptLabel = null;
+    
+    if (transcriptWrapper) {
+      transcriptCheckbox = transcriptWrapper.querySelector('input[type="checkbox"]');
+      console.log('[Auto Record] Found transcript wrapper by jsname');
     } else {
-      transcriptCheckbox = findCheckboxByLabel('Also start a transcript') ||
-                           findCheckboxByLabel('start a transcript') ||
-                           findCheckboxByLabel('transcript');
+      // 2. Find by label text, then find associated checkbox
+      const labels = document.querySelectorAll('label');
+      for (const label of labels) {
+        const labelText = (label.textContent || label.innerText || '').toLowerCase();
+        if (labelText.includes('also start a transcript') || labelText.includes('start a transcript')) {
+          transcriptLabel = label;
+          const forId = label.getAttribute('for');
+          if (forId) {
+            transcriptCheckbox = document.getElementById(forId);
+          }
+          if (!transcriptCheckbox) {
+            transcriptCheckbox = label.querySelector('input[type="checkbox"]');
+          }
+          if (!transcriptCheckbox) {
+            transcriptWrapper = label.closest('div[jsname="AXUMc"]');
+            if (transcriptWrapper) {
+              transcriptCheckbox = transcriptWrapper.querySelector('input[type="checkbox"]');
+            }
+          }
+          console.log('[Auto Record] Found transcript checkbox by label text');
+          break;
+        }
+      }
+    }
+    
+    // If still not found, try searching all checkboxes
+    if (!transcriptCheckbox && !transcriptWrapper) {
+      const allCheckboxes = document.querySelectorAll('input[type="checkbox"]');
+      for (const cb of allCheckboxes) {
+        const label = cb.closest('label') || document.querySelector(`label[for="${cb.id}"]`);
+        if (label) {
+          const labelText = (label.textContent || label.innerText || '').toLowerCase();
+          if (labelText.includes('also start a transcript') || labelText.includes('start a transcript')) {
+            transcriptCheckbox = cb;
+            transcriptLabel = label;
+            transcriptWrapper = cb.closest('div[jsname]');
+            console.log('[Auto Record] Found transcript checkbox by searching all checkboxes');
+            break;
+          }
+        }
+      }
     }
     
     if (transcriptCheckbox || transcriptWrapper) {
-      const checkbox = transcriptCheckbox || document.getElementById('c182');
-      const wrapper = transcriptWrapper || checkbox?.closest('div[jsname="AXUMc"]');
+      const checkbox = transcriptCheckbox || transcriptWrapper?.querySelector('input[type="checkbox"]');
+      const wrapper = transcriptWrapper || checkbox?.closest('div[jsname]');
+      const label = transcriptLabel || document.querySelector(`label[for="${checkbox?.id}"]`) || checkbox?.closest('label');
       
-      console.log('[Auto Record] Found transcript checkbox, checking it...');
+      console.log('[Auto Record] Found transcript checkbox:', !!checkbox, 'wrapper:', !!wrapper, 'label:', !!label);
       const checked = checkbox?.checked || false;
       console.log('[Auto Record] Transcript checkbox checked:', checked);
       
       if (!checked) {
-        // Click the wrapper div which has the jsaction handlers
+        // Try clicking wrapper first (has jsaction handlers)
         if (wrapper) {
           console.log('[Auto Record] Clicking transcript wrapper div');
           wrapper.click();
+          // Also try clicking label
+          setTimeout(() => {
+            if (label && !checkbox?.checked) {
+              console.log('[Auto Record] Clicking transcript label');
+              label.click();
+            }
+          }, 50);
+        } else if (label) {
+          console.log('[Auto Record] Clicking transcript label');
+          label.click();
         } else if (checkbox) {
           console.log('[Auto Record] Clicking transcript checkbox directly');
           checkbox.click();
-        }
-        
-        // Also click the label
-        const label = document.querySelector('label[for="c182"]');
-        if (label) {
-          console.log('[Auto Record] Clicking transcript label');
-          label.click();
         }
       } else {
         console.log('[Auto Record] Transcript checkbox already checked');
