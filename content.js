@@ -422,16 +422,46 @@ function findRecordingButton() {
 function findManageRecordingOption() {
   console.log('[Auto Record] Searching for "Manage recording" option...');
   
-  // Look for elements with "Manage recording" or "Manage Recording" text
-  const allElements = document.querySelectorAll('div, button, [role="button"], [role="menuitem"], span, li');
+  // First, try to find the menu that's open
+  const menuSelectors = [
+    '[role="menu"]',
+    '[role="listbox"]',
+    'div[role="menu"]',
+    'ul[role="menu"]',
+    '[role="list"]'
+  ];
+  
+  let menu = null;
+  for (const selector of menuSelectors) {
+    const menus = document.querySelectorAll(selector);
+    for (const m of menus) {
+      const style = window.getComputedStyle(m);
+      if (style.display !== 'none' && style.visibility !== 'hidden') {
+        const menuText = (m.textContent || m.innerText || '').toLowerCase();
+        if (menuText.includes('manage recording') || menuText.includes('cast this meeting')) {
+          menu = m;
+          console.log('[Auto Record] Found open menu with selector:', selector);
+          break;
+        }
+      }
+    }
+    if (menu) break;
+  }
+  
+  // Search in the menu if found, otherwise search everywhere
+  const searchRoot = menu || document;
+  
+  // Look for elements with "Manage recording" text (may have icon prefixes like "radio_button_checkedManage recording")
+  const allElements = searchRoot.querySelectorAll('div, button, [role="button"], [role="menuitem"], span, li');
   for (const element of allElements) {
     const text = (element.textContent || element.innerText || '').trim();
     const ariaLabel = (element.getAttribute('aria-label') || '').trim();
     
-    // Check if it contains "Manage recording" (case insensitive)
+    // Check if it contains "Manage recording" (case insensitive, ignore icon prefixes)
     const fullText = (text + ' ' + ariaLabel).toLowerCase();
     
-    if (fullText.includes('manage recording') || fullText.includes('manage recording')) {
+    // Match "manage recording" even if there's text before it (like icon names)
+    if (fullText.includes('manage recording')) {
       // Make sure it's clickable and visible
       const style = window.getComputedStyle(element);
       const rect = element.getBoundingClientRect();
@@ -454,10 +484,14 @@ function findManageRecordingOption() {
   }
   
   // Also try aria-label selectors
-  const ariaElements = document.querySelectorAll('[aria-label*="Manage recording" i], [aria-label*="manage recording"]');
+  const ariaElements = searchRoot.querySelectorAll('[aria-label*="Manage recording" i], [aria-label*="manage recording"]');
   for (const element of ariaElements) {
     const style = window.getComputedStyle(element);
-    if (style.display !== 'none' && style.visibility !== 'hidden') {
+    const rect = element.getBoundingClientRect();
+    if (style.display !== 'none' && 
+        style.visibility !== 'hidden' &&
+        rect.width > 0 && 
+        rect.height > 0) {
       console.log('[Auto Record] ✅ Found "Manage recording" option by aria-label:', element.getAttribute('aria-label'));
       return element;
     }
