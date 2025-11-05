@@ -256,6 +256,19 @@ function findRecordingButton() {
   const allButtons = document.querySelectorAll('button, [role="button"]');
   console.log('[Auto Record] Total buttons found:', allButtons.length);
   
+  // Log all button labels for debugging (first 20 buttons)
+  const buttonLabels = [];
+  for (let i = 0; i < Math.min(allButtons.length, 20); i++) {
+    const button = allButtons[i];
+    const ariaLabel = button.getAttribute('aria-label') || '';
+    const textContent = button.textContent || '';
+    const label = (ariaLabel || textContent).trim();
+    if (label) {
+      buttonLabels.push(label);
+    }
+  }
+  console.log('[Auto Record] Sample button labels:', buttonLabels);
+  
   for (const button of allButtons) {
     const ariaLabel = button.getAttribute('aria-label') || '';
     const textContent = button.textContent || '';
