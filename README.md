@@ -37,10 +37,10 @@ A Chrome extension that automatically starts recording when the host joins a Goo
 2. Configure the consent screen:
    - Choose **Internal** (for Google Workspace users) or **External** (for public use)
    - Fill in required fields (App name, User support email, Developer contact)
-3. Add the following **Scopes** (click "Add or Remove Scopes"):
-   - `https://www.googleapis.com/auth/chat.meetingspace.readonly`
+3. Add the following **Scope** (click "Add or Remove Scopes"):
    - `https://www.googleapis.com/auth/meetings.space.readonly`
-   - `https://www.googleapis.com/auth/workspace.events`
+   
+   **Note:** The Google Workspace Events API uses the `meetings.space.readonly` scope - there is no separate `workspace.events` scope.
 4. Click **Save and Continue** through the remaining steps
 
 ### 3. OAuth 2.0 Credentials Configuration

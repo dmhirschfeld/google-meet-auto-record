@@ -90,9 +90,7 @@ async function authenticate() {
     const token = await chrome.identity.getAuthToken({ 
       interactive: true,
       scopes: [
-        'https://www.googleapis.com/auth/chat.meetingspace.readonly',
-        'https://www.googleapis.com/auth/meetings.space.readonly',
-        'https://www.googleapis.com/auth/workspace.events'
+        'https://www.googleapis.com/auth/meetings.space.readonly'
       ]
     });
     

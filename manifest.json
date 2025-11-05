@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Google Meet Auto Record",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Automatically starts recording when the host joins a Google Meet session",
   "permissions": [
     "identity",
@@ -35,9 +35,7 @@
   "oauth2": {
     "client_id": "YOUR_CLIENT_ID.apps.googleusercontent.com",
     "scopes": [
-      "https://www.googleapis.com/auth/chat.meetingspace.readonly",
-      "https://www.googleapis.com/auth/meetings.space.readonly",
-      "https://www.googleapis.com/auth/workspace.events"
+      "https://www.googleapis.com/auth/meetings.space.readonly"
     ]
   },
   "icons": {
