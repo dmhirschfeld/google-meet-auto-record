@@ -71,7 +71,10 @@ function detectHostJoinViaDOM() {
     // Participant info
     '[data-participant-id]',
     // Meeting header
-    '[data-meeting-title]'
+    '[data-meeting-title]',
+    // Bottom control bar
+    '[aria-label*="Leave call"]',
+    '[aria-label*="Leave"]'
   ];
 
   const hasJoined = indicators.some(selector => {
@@ -84,9 +87,35 @@ function detectHostJoinViaDOM() {
                       document.querySelector('[aria-label*="Join"]');
     
     if (!joinButton || joinButton.textContent.trim() === '') {
-      // User has joined, start recording process
-      hostJoined = true;
-      handleHostJoined();
+      // Check if recording button is available (indicates host)
+      const recordingButton = findRecordingButton();
+      if (recordingButton) {
+        // User is host and recording button is available
+        console.log('Host detected - recording button found');
+        hostJoined = true;
+        handleHostJoined();
+      } else {
+        // User has joined but recording button not found yet
+        // Check for host controls indicator
+        const hostControls = document.querySelector('[aria-label*="Host controls"]') ||
+                            document.querySelector('[data-tooltip*="Host"]') ||
+                            document.querySelector('[aria-label*="More options"]');
+        
+        if (hostControls) {
+          console.log('Host controls found, waiting for recording button...');
+          // User is likely host, proceed anyway (button might be in menu)
+          hostJoined = true;
+          handleHostJoined();
+        } else {
+          // Retry to check if recording button appears
+          setTimeout(() => {
+            if (!hostJoined && retryCount < MAX_RETRIES) {
+              retryCount++;
+              detectHostJoinViaDOM();
+            }
+          }, RETRY_DELAY);
+        }
+      }
     }
   } else {
     // Retry after delay
