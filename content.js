@@ -349,6 +349,28 @@ function findRecordingButton() {
     setTimeout(checkMenu, 1000);
   }
   
+  // Try "Activities" menu (three dots icon on bottom bar)
+  const activitiesButton = document.querySelector('[aria-label*="Activities"]') ||
+                          document.querySelector('[data-tooltip*="Activities"]') ||
+                          document.querySelector('button[aria-label*="activities" i]');
+  if (activitiesButton) {
+    console.log('[Auto Record] Activities button found, trying that...');
+    activitiesButton.click();
+    setTimeout(() => {
+      const recordingButton = findRecordingButtonInMenu();
+      if (recordingButton) {
+        console.log('[Auto Record] ✅ Found recording button in Activities menu');
+        recordingButton.click();
+        recordingStarted = true;
+        chrome.runtime.sendMessage({
+          action: 'recordingStarted',
+          success: true
+        });
+        return recordingButton;
+      }
+    }, 1000);
+  }
+  
   // Also try "Host controls" menu if it exists
   const hostControlsButton = document.querySelector('[aria-label*="Host controls"]') ||
                             document.querySelector('[data-tooltip*="Host controls"]');
@@ -376,18 +398,42 @@ function findRecordingButton() {
 
 // Find the "More options" menu button
 function findMoreOptionsButton() {
+  // Find the three dots button in the bottom control bar
+  // It's usually near the microphone/camera controls
   const selectors = [
-    '[aria-label*="More options"]',
-    '[aria-label*="more options"]',
-    '[aria-label*="More actions"]',
-    '[data-tooltip*="More"]',
-    'button[jsname="b3VHJd"]', // Common Meet button selector
+    // Bottom bar three dots
+    'button[aria-label*="More options"]',
+    'button[aria-label*="more options"]',
+    'button[aria-label*="More actions"]',
+    'button[data-tooltip*="More"]',
+    // Bottom control bar - look for three dots icon
+    'div[role="toolbar"] button:has(svg)',
+    'div[role="toolbar"] button[aria-label*="More"]',
+    // Alternative selector
+    'button[jsname="b3VHJd"]',
   ];
 
   for (const selector of selectors) {
-    const element = document.querySelector(selector);
-    if (element) {
-      return element;
+    try {
+      const elements = document.querySelectorAll(selector);
+      // Find the one that's actually visible and in the bottom bar
+      for (const element of elements) {
+        const rect = element.getBoundingClientRect();
+        const style = window.getComputedStyle(element);
+        // Check if button is visible and in bottom part of screen
+        if (style.display !== 'none' && 
+            style.visibility !== 'hidden' &&
+            rect.bottom > window.innerHeight * 0.7) { // Bottom 30% of screen
+          const ariaLabel = element.getAttribute('aria-label') || '';
+          if (ariaLabel.toLowerCase().includes('more') || 
+              ariaLabel.toLowerCase().includes('options')) {
+            return element;
+          }
+        }
+      }
+    } catch (error) {
+      // Invalid selector, continue
+      continue;
     }
   }
 
