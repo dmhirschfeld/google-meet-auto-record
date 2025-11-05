@@ -149,19 +149,33 @@ function startRecording() {
 function findRecordingButton() {
   // Multiple selectors to try, as Google Meet uses dynamic class names
   
+  // First, try to find all buttons and check their labels
+  const allButtons = document.querySelectorAll('button, [role="button"]');
+  for (const button of allButtons) {
+    const ariaLabel = button.getAttribute('aria-label') || '';
+    const textContent = button.textContent || '';
+    const tooltip = button.getAttribute('data-tooltip') || '';
+    const label = (ariaLabel + ' ' + textContent + ' ' + tooltip).toLowerCase();
+    
+    // Check for recording-related text
+    if ((label.includes('record') && label.includes('start')) || 
+        (label.includes('record') && !label.includes('stop') && !label.includes('end'))) {
+      console.log('Found recording button:', ariaLabel || textContent || tooltip);
+      return button;
+    }
+  }
+  
   // Try direct selectors
   const selectors = [
     // By aria-label (most reliable)
     '[aria-label*="Start recording"]',
     '[aria-label*="start recording"]',
+    '[aria-label*="Record meeting"]',
+    '[aria-label*="record meeting"]',
     '[aria-label*="Record"]',
     '[aria-label*="record"]',
     '[data-tooltip*="record"]',
     '[data-tooltip*="Record"]',
-    
-    // By text content
-    'button:has-text("Start recording")',
-    'button:has-text("Record")',
     
     // By role and text
     'button[role="button"][aria-label*="record" i]',
@@ -233,17 +247,31 @@ function findMoreOptionsButton() {
 
 // Find recording button in menu
 function findRecordingButtonInMenu() {
-  // Search in the opened menu
-  const menu = document.querySelector('[role="menu"]') || 
-               document.querySelector('[jsname="b3VHJd"]');
+  // Search in the opened menu - try multiple menu selectors
+  const menuSelectors = [
+    '[role="menu"]',
+    '[role="listbox"]',
+    '[jsname="b3VHJd"]',
+    '[aria-label*="More options"]',
+    'div[role="menu"]',
+    'ul[role="menu"]'
+  ];
   
-  if (menu) {
-    const buttons = menu.querySelectorAll('button');
-    for (const button of buttons) {
-      const label = button.getAttribute('aria-label') || button.textContent || '';
-      if (label.toLowerCase().includes('record') && 
-          label.toLowerCase().includes('start')) {
-        return button;
+  for (const menuSelector of menuSelectors) {
+    const menu = document.querySelector(menuSelector);
+    if (menu) {
+      const buttons = menu.querySelectorAll('button, [role="button"], [role="menuitem"]');
+      for (const button of buttons) {
+        const ariaLabel = button.getAttribute('aria-label') || '';
+        const textContent = button.textContent || '';
+        const label = (ariaLabel + ' ' + textContent).toLowerCase();
+        
+        // Check for recording-related text
+        if ((label.includes('record') && label.includes('start')) ||
+            (label.includes('record') && !label.includes('stop') && !label.includes('end'))) {
+          console.log('Found recording button in menu:', ariaLabel || textContent);
+          return button;
+        }
       }
     }
   }
