@@ -336,10 +336,9 @@ function findRecordingButton() {
     // Click to open menu
     moreOptionsButton.click();
     
-    // Wait for menu to open and find "Manage recording" option
-    let menuCheckAttempts = 0;
-    const checkMenu = () => {
-      menuCheckAttempts++;
+    // Wait 1-2 seconds for menu to fully open and stabilize before trying to click
+    console.log('[Auto Record] Waiting for menu to open...');
+    setTimeout(() => {
       const manageRecordingOption = findManageRecordingOption();
       if (manageRecordingOption) {
         console.log('[Auto Record] ✅ Found "Manage recording" option, clicking...');
@@ -348,51 +347,49 @@ function findRecordingButton() {
         // Wait for recording panel/slideout to appear
         setTimeout(() => {
           handleRecordingDialog();
-        }, 600);
-        return;
-      } else if (menuCheckAttempts < 5) {
-        // Retry checking menu after delay (menu might be animating)
-        setTimeout(checkMenu, 300);
+        }, 1000);
       } else {
-        console.log('[Auto Record] ⚠️ "Manage recording" option not found in menu');
+        console.log('[Auto Record] ⚠️ "Manage recording" option not found, retrying once...');
+        // Retry once after another delay
+        setTimeout(() => {
+          const manageRecordingOption = findManageRecordingOption();
+          if (manageRecordingOption) {
+            console.log('[Auto Record] ✅ Found "Manage recording" option on retry, clicking...');
+            manageRecordingOption.click();
+            setTimeout(() => {
+              handleRecordingDialog();
+            }, 1000);
+          } else {
+            console.log('[Auto Record] ❌ "Manage recording" option not found after retry');
+          }
+        }, 1000);
       }
-    };
-    
-    // Start checking after initial delay
-    setTimeout(checkMenu, 500);
+    }, 1500); // Wait 1.5 seconds for menu to open and stabilize
   }
   
-  // Try "Activities" menu (opens Meeting Tools) - this is the primary method
+  // Fallback: Try "Activities" menu (opens Meeting Tools) if More options didn't work
   const activitiesButton = document.querySelector('[aria-label*="Activities"]') ||
                           document.querySelector('[data-tooltip*="Activities"]') ||
                           document.querySelector('button[aria-label*="activities" i]');
-  if (activitiesButton) {
+  if (activitiesButton && !moreOptionsButton) {
     console.log('[Auto Record] Activities button found, opening Meeting Tools...');
     activitiesButton.click();
     
     // Wait for Meeting Tools menu to open and find Recording
-    // Try multiple times as menu might take time to render
-    let meetingToolsAttempts = 0;
-    const checkMeetingTools = () => {
-      meetingToolsAttempts++;
+    setTimeout(() => {
       const recordingOption = findRecordingInMeetingTools();
       if (recordingOption) {
         console.log('[Auto Record] ✅ Found Recording option in Meeting Tools, clicking...');
         recordingOption.click();
         
-        // Wait for recording dialog to appear (reduced delay for faster navigation)
+        // Wait for recording dialog to appear
         setTimeout(() => {
           handleRecordingDialog();
-        }, 600);
-      } else if (meetingToolsAttempts < 5) {
-        // Retry after shorter delay
-        setTimeout(checkMeetingTools, 300);
+        }, 1000);
       } else {
-        console.log('[Auto Record] ⚠️ Recording option not found in Meeting Tools after multiple attempts');
+        console.log('[Auto Record] ⚠️ Recording option not found in Meeting Tools');
       }
-    };
-    
-    setTimeout(checkMeetingTools, 500); // Reduced initial delay
+    }, 1500); // Wait for menu to open
     return null; // Return early since we're handling this path
   }
   
@@ -539,9 +536,14 @@ function handleRecordingDialog() {
     const hasRecordingPanel = recordingPanel && 
       (recordingPanel.textContent || recordingPanel.innerText || '').toLowerCase().includes('record');
     
-    if (!hasRecordingPanel && dialogAttempts < 5) {
+    if (!hasRecordingPanel && dialogAttempts === 1) {
       console.log('[Auto Record] Recording panel not visible yet, waiting...');
-      setTimeout(processDialog, 500);
+      setTimeout(processDialog, 1000);
+      return;
+    }
+    
+    if (!hasRecordingPanel) {
+      console.log('[Auto Record] ⚠️ Recording panel not found after retry');
       return;
     }
     
@@ -585,9 +587,9 @@ function handleRecordingDialog() {
         console.log(`[Auto Record] Checkbox ${i}: checked=${cb.checked}, visible=${style.display !== 'none'}, label="${labelText}", aria-label="${ariaLabel}"`);
       }
       
-      // Retry if not found
-      if (dialogAttempts < 5) {
-        setTimeout(processDialog, 500);
+      // Retry once if not found
+      if (dialogAttempts === 1) {
+        setTimeout(processDialog, 1000);
         return;
       }
     }
@@ -612,7 +614,6 @@ function handleRecordingDialog() {
   
   // Start processing after initial delay to let panel render
   setTimeout(processDialog, 1000);
-  setTimeout(() => processDialog(), 2000); // Retry after 2s if first attempt failed
 }
 
 // Find checkbox by label text (more comprehensive search)
