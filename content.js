@@ -329,37 +329,37 @@ function findRecordingButton() {
     }
   }
 
-  // If not found, try searching in the "More options" menu
+  // Try "More options" menu first - look for "Manage recording" option
   const moreOptionsButton = findMoreOptionsButton();
   if (moreOptionsButton) {
     console.log('[Auto Record] More options button found, opening menu...');
     // Click to open menu
     moreOptionsButton.click();
     
-    // Wait for menu to open and search again - try multiple times with delays
+    // Wait for menu to open and find "Manage recording" option
     let menuCheckAttempts = 0;
     const checkMenu = () => {
       menuCheckAttempts++;
-      const recordingButton = findRecordingButtonInMenu();
-      if (recordingButton) {
-        console.log('[Auto Record] ✅ Found recording button in menu, clicking...');
-        recordingButton.click();
-        recordingStarted = true;
-        chrome.runtime.sendMessage({
-          action: 'recordingStarted',
-          success: true
-        });
-        return recordingButton;
+      const manageRecordingOption = findManageRecordingOption();
+      if (manageRecordingOption) {
+        console.log('[Auto Record] ✅ Found "Manage recording" option, clicking...');
+        manageRecordingOption.click();
+        
+        // Wait for recording panel/slideout to appear
+        setTimeout(() => {
+          handleRecordingDialog();
+        }, 600);
+        return;
       } else if (menuCheckAttempts < 5) {
         // Retry checking menu after delay (menu might be animating)
-        setTimeout(checkMenu, 500);
+        setTimeout(checkMenu, 300);
       } else {
-        console.log('[Auto Record] ⚠️ Recording button not found in menu after multiple attempts');
+        console.log('[Auto Record] ⚠️ "Manage recording" option not found in menu');
       }
     };
     
     // Start checking after initial delay
-    setTimeout(checkMenu, 1000);
+    setTimeout(checkMenu, 500);
   }
   
   // Try "Activities" menu (opens Meeting Tools) - this is the primary method
@@ -418,6 +418,55 @@ function findRecordingButton() {
   }
 
   console.log('[Auto Record] ❌ Recording button not found');
+  return null;
+}
+
+// Find "Manage recording" option in the More options menu
+function findManageRecordingOption() {
+  console.log('[Auto Record] Searching for "Manage recording" option...');
+  
+  // Look for elements with "Manage recording" or "Manage Recording" text
+  const allElements = document.querySelectorAll('div, button, [role="button"], [role="menuitem"], span, li');
+  for (const element of allElements) {
+    const text = (element.textContent || element.innerText || '').trim();
+    const ariaLabel = (element.getAttribute('aria-label') || '').trim();
+    
+    // Check if it contains "Manage recording" (case insensitive)
+    const fullText = (text + ' ' + ariaLabel).toLowerCase();
+    
+    if (fullText.includes('manage recording') || fullText.includes('manage recording')) {
+      // Make sure it's clickable and visible
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      
+      if (style.display !== 'none' && 
+          style.visibility !== 'hidden' &&
+          rect.width > 0 && 
+          rect.height > 0) {
+        console.log('[Auto Record] ✅ Found "Manage recording" option:', text || ariaLabel);
+        // Try to find the clickable parent if this is a text element
+        if (element.tagName === 'SPAN' || element.tagName === 'DIV' || element.tagName === 'LI') {
+          const clickable = element.closest('button, [role="button"], [role="menuitem"]');
+          if (clickable) {
+            return clickable;
+          }
+        }
+        return element;
+      }
+    }
+  }
+  
+  // Also try aria-label selectors
+  const ariaElements = document.querySelectorAll('[aria-label*="Manage recording" i], [aria-label*="manage recording"]');
+  for (const element of ariaElements) {
+    const style = window.getComputedStyle(element);
+    if (style.display !== 'none' && style.visibility !== 'hidden') {
+      console.log('[Auto Record] ✅ Found "Manage recording" option by aria-label:', element.getAttribute('aria-label'));
+      return element;
+    }
+  }
+  
+  console.log('[Auto Record] ⚠️ "Manage recording" option not found');
   return null;
 }
 
