@@ -998,14 +998,31 @@ function clickStartRecordingButton() {
   for (const button of buttons) {
     const text = (button.textContent || button.innerText || '').trim().toLowerCase();
     const ariaLabel = (button.getAttribute('aria-label') || '').toLowerCase();
-    
-    // Look for "Start recording" button (in the sidebar panel)
+    const dataAction = (button.getAttribute('data-mdc-dialog-action') || '').toLowerCase();
+
+    let isRecordingStartButton = false;
+
+    // Primary check: explicit "Start recording" button text or aria-label
     if ((text.includes('start recording') || text === 'start recording') ||
         (ariaLabel.includes('start recording'))) {
+      isRecordingStartButton = true;
+    } else if (text === 'start' || ariaLabel === 'start' || dataAction === 'a9emjd') {
+      // Secondary check: generic "Start" button inside the recording dialog
+      const dialog = button.closest('[role="dialog"], div[data-mdc-dialog-action], div[data-is-touch-wrapper], div[class*="sidebar"], div[class*="panel"]');
+      if (dialog) {
+        const dialogText = (dialog.textContent || dialog.innerText || '').toLowerCase();
+        if (dialogText.includes('record') || dialogText.includes('recording')) {
+          isRecordingStartButton = true;
+        }
+      }
+    }
+
+    if (isRecordingStartButton) {
       // Make sure it's visible and clickable
       const style = window.getComputedStyle(button);
-      if (style.display !== 'none' && style.visibility !== 'hidden') {
-        console.log('[Auto Record] ✅ Found Start recording button, clicking...');
+      const rect = button.getBoundingClientRect();
+      if (style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0) {
+        console.log('[Auto Record] ✅ Found Start button for recording, clicking...');
         button.click();
         recordingStarted = true;
         chrome.runtime.sendMessage({
@@ -1016,7 +1033,7 @@ function clickStartRecordingButton() {
       }
     }
   }
-  
+
   console.log('[Auto Record] ⚠️ Start recording button not found');
   return false;
 }
