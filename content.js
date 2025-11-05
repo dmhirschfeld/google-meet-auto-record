@@ -571,8 +571,8 @@ function handleRecordingDialog() {
     console.log('[Auto Record] Panel found:', !!recordingPanel, 'Has start button:', hasStartButton);
     
     if ((!hasRecordingPanel || !hasStartButton) && dialogAttempts === 1) {
-      console.log('[Auto Record] Recording panel not fully loaded yet, waiting longer...');
-      setTimeout(processDialog, 2000); // Wait 2 more seconds
+      console.log('[Auto Record] Recording panel not fully loaded yet, waiting...');
+      setTimeout(processDialog, 500); // Wait 0.5 more seconds
       return;
     }
     
