@@ -564,9 +564,27 @@ function handleRecordingDialog() {
     const hasRecordingPanel = recordingPanel && 
       (panelText.includes('record') || panelText.includes('captions') || panelText.includes('transcript'));
     
-    // Also check for Start recording button as indicator
-    const startButton = clickStartRecordingButton();
-    const hasStartButton = startButton !== false;
+    // Also check for Start recording button as indicator (but don't fail if not found)
+    let hasStartButton = false;
+    try {
+      // Just check if button exists, don't click it yet
+      const buttons = document.querySelectorAll('button, [role="button"]');
+      for (const button of buttons) {
+        const text = (button.textContent || button.innerText || '').trim().toLowerCase();
+        const ariaLabel = (button.getAttribute('aria-label') || '').toLowerCase();
+        
+        if ((text.includes('start recording') || text === 'start recording') ||
+            (ariaLabel.includes('start recording'))) {
+          const style = window.getComputedStyle(button);
+          if (style.display !== 'none' && style.visibility !== 'hidden') {
+            hasStartButton = true;
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      console.log('[Auto Record] Error checking for start button:', e);
+    }
     
     console.log('[Auto Record] Panel found:', !!recordingPanel, 'Has start button:', hasStartButton);
     
