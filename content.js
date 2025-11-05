@@ -380,19 +380,19 @@ function findRecordingButton() {
         console.log('[Auto Record] ✅ Found Recording option in Meeting Tools, clicking...');
         recordingOption.click();
         
-        // Wait for recording dialog to appear
+        // Wait for recording dialog to appear (reduced delay for faster navigation)
         setTimeout(() => {
           handleRecordingDialog();
-        }, 1000);
+        }, 600);
       } else if (meetingToolsAttempts < 5) {
-        // Retry after delay
-        setTimeout(checkMeetingTools, 500);
+        // Retry after shorter delay
+        setTimeout(checkMeetingTools, 300);
       } else {
         console.log('[Auto Record] ⚠️ Recording option not found in Meeting Tools after multiple attempts');
       }
     };
     
-    setTimeout(checkMeetingTools, 1000);
+    setTimeout(checkMeetingTools, 500); // Reduced initial delay
     return null; // Return early since we're handling this path
   }
   
@@ -475,8 +475,12 @@ function findRecordingInMeetingTools() {
 function handleRecordingDialog() {
   console.log('[Auto Record] Handling recording dialog...');
   
-  // Wait a bit for dialog to fully render
-  setTimeout(() => {
+  // Wait a bit for dialog to fully render, then retry if needed
+  let dialogAttempts = 0;
+  const processDialog = () => {
+    dialogAttempts++;
+    console.log(`[Auto Record] Processing dialog (attempt ${dialogAttempts})...`);
+    
     // Find and check "Include captions in the recording" checkbox
     const captionsCheckbox = findCheckboxByLabel('Include captions');
     if (captionsCheckbox) {
@@ -489,86 +493,185 @@ function handleRecordingDialog() {
     }
     
     // Find and check "Also start a transcript" checkbox
-    const transcriptCheckbox = findCheckboxByLabel('Also start a transcript');
+    const transcriptCheckbox = findCheckboxByLabel('Also start a transcript') ||
+                               findCheckboxByLabel('start a transcript') ||
+                               findCheckboxByLabel('transcript');
     if (transcriptCheckbox) {
       console.log('[Auto Record] Found transcript checkbox, checking it...');
       if (!transcriptCheckbox.checked) {
         transcriptCheckbox.click();
+        console.log('[Auto Record] ✅ Transcript checkbox clicked');
+      } else {
+        console.log('[Auto Record] Transcript checkbox already checked');
       }
     } else {
-      console.log('[Auto Record] ⚠️ Transcript checkbox not found');
+      console.log('[Auto Record] ⚠️ Transcript checkbox not found, retrying...');
+      // Log all checkboxes for debugging
+      const allCheckboxes = document.querySelectorAll('input[type="checkbox"]');
+      console.log(`[Auto Record] Found ${allCheckboxes.length} checkboxes total`);
+      for (let i = 0; i < allCheckboxes.length; i++) {
+        const cb = allCheckboxes[i];
+        const label = cb.closest('label');
+        const labelText = label ? (label.textContent || label.innerText || '') : '';
+        const ariaLabel = cb.getAttribute('aria-label') || '';
+        console.log(`[Auto Record] Checkbox ${i}: checked=${cb.checked}, label="${labelText}", aria-label="${ariaLabel}"`);
+      }
     }
     
-    // Wait a bit for checkboxes to update
+    // Wait a bit for checkboxes to update, then click Start
     setTimeout(() => {
-      // Find and click "Start recording" button
-      const startRecordingButton = findStartRecordingButton();
-      if (startRecordingButton) {
-        console.log('[Auto Record] ✅ Clicking Start recording button...');
-        startRecordingButton.click();
-        recordingStarted = true;
-        chrome.runtime.sendMessage({
-          action: 'recordingStarted',
-          success: true
-        });
+      // First, handle consent dialog if it exists
+      const consentStartButton = findConsentStartButton();
+      if (consentStartButton) {
+        console.log('[Auto Record] Found consent dialog Start button, clicking...');
+        consentStartButton.click();
+        // After clicking consent, wait and then click the main Start button
+        setTimeout(() => {
+          clickStartRecordingButton();
+        }, 500);
       } else {
-        console.log('[Auto Record] ⚠️ Start recording button not found in dialog');
+        // No consent dialog, go straight to Start button
+        clickStartRecordingButton();
       }
-    }, 500);
-  }, 500);
+    }, 300);
+  };
+  
+  // Try immediately, then retry if needed
+  setTimeout(processDialog, 800);
+  setTimeout(() => processDialog(), 1500); // Retry after 1.5s if first attempt failed
 }
 
-// Find checkbox by label text
+// Find checkbox by label text (more comprehensive search)
 function findCheckboxByLabel(labelText) {
   const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+  const searchText = labelText.toLowerCase();
+  
   for (const checkbox of checkboxes) {
+    // Check if checkbox is visible
+    const style = window.getComputedStyle(checkbox);
+    if (style.display === 'none' || style.visibility === 'hidden') {
+      continue;
+    }
+    
     // Check the label associated with this checkbox
     const label = checkbox.closest('label');
     if (label) {
-      const labelTextContent = label.textContent || label.innerText || '';
-      if (labelTextContent.toLowerCase().includes(labelText.toLowerCase())) {
+      const labelTextContent = (label.textContent || label.innerText || '').toLowerCase();
+      if (labelTextContent.includes(searchText)) {
+        console.log(`[Auto Record] Found checkbox by label: "${labelTextContent}"`);
         return checkbox;
       }
     }
     
     // Check aria-label
-    const ariaLabel = checkbox.getAttribute('aria-label') || '';
-    if (ariaLabel.toLowerCase().includes(labelText.toLowerCase())) {
+    const ariaLabel = (checkbox.getAttribute('aria-label') || '').toLowerCase();
+    if (ariaLabel.includes(searchText)) {
+      console.log(`[Auto Record] Found checkbox by aria-label: "${ariaLabel}"`);
       return checkbox;
     }
     
-    // Check parent elements for label text
+    // Check aria-labelledby
+    const labelledBy = checkbox.getAttribute('aria-labelledby');
+    if (labelledBy) {
+      const labelElement = document.getElementById(labelledBy);
+      if (labelElement) {
+        const labelTextContent = (labelElement.textContent || labelElement.innerText || '').toLowerCase();
+        if (labelTextContent.includes(searchText)) {
+          console.log(`[Auto Record] Found checkbox by aria-labelledby: "${labelTextContent}"`);
+          return checkbox;
+        }
+      }
+    }
+    
+    // Check parent elements for label text (more thorough)
     let parent = checkbox.parentElement;
     let depth = 0;
-    while (parent && depth < 5) {
-      const parentText = parent.textContent || parent.innerText || '';
-      if (parentText.toLowerCase().includes(labelText.toLowerCase())) {
+    while (parent && depth < 8) {
+      const parentText = (parent.textContent || parent.innerText || '').toLowerCase();
+      // Check if parent contains the label text
+      if (parentText.includes(searchText)) {
+        // Also check if there's a span or div nearby with the text
+        const nearbyText = parent.querySelector('span, div, p');
+        if (nearbyText) {
+          const nearbyTextContent = (nearbyText.textContent || nearbyText.innerText || '').toLowerCase();
+          if (nearbyTextContent.includes(searchText)) {
+            console.log(`[Auto Record] Found checkbox by parent text: "${nearbyTextContent}"`);
+            return checkbox;
+          }
+        }
+        console.log(`[Auto Record] Found checkbox by parent text: "${parentText.substring(0, 50)}"`);
         return checkbox;
       }
       parent = parent.parentElement;
       depth++;
+    }
+    
+    // Check sibling elements
+    const nextSibling = checkbox.nextElementSibling;
+    if (nextSibling) {
+      const siblingText = (nextSibling.textContent || nextSibling.innerText || '').toLowerCase();
+      if (siblingText.includes(searchText)) {
+        console.log(`[Auto Record] Found checkbox by sibling text: "${siblingText}"`);
+        return checkbox;
+      }
     }
   }
   
   return null;
 }
 
-// Find "Start recording" button in the dialog
-function findStartRecordingButton() {
+// Find consent dialog Start button ("Make sure everyone is ready")
+function findConsentStartButton() {
   const buttons = document.querySelectorAll('button, [role="button"]');
   for (const button of buttons) {
-    const text = (button.textContent || button.innerText || '').trim();
-    const ariaLabel = button.getAttribute('aria-label') || '';
+    const text = (button.textContent || button.innerText || '').trim().toLowerCase();
+    const ariaLabel = (button.getAttribute('aria-label') || '').toLowerCase();
     
-    if ((text.toLowerCase().includes('start recording') ||
-         text.toLowerCase() === 'start recording') ||
-        (ariaLabel.toLowerCase().includes('start recording'))) {
-      console.log('[Auto Record] ✅ Found Start recording button:', text || ariaLabel);
-      return button;
+    // Look for "Start" button in consent dialog (not "Start recording")
+    if ((text === 'start' || text === 'start recording') &&
+        (ariaLabel.includes('start') || ariaLabel.includes('recording') || ariaLabel === '')) {
+      // Check if it's in a dialog that mentions consent/ready
+      const dialog = button.closest('[role="dialog"], div[class*="dialog"], div[class*="modal"]');
+      if (dialog) {
+        const dialogText = (dialog.textContent || dialog.innerText || '').toLowerCase();
+        if (dialogText.includes('ready') || dialogText.includes('consent') || dialogText.includes('everyone')) {
+          console.log('[Auto Record] ✅ Found consent dialog Start button');
+          return button;
+        }
+      }
     }
   }
   
   return null;
+}
+
+// Find and click "Start recording" button in the dialog
+function clickStartRecordingButton() {
+  const buttons = document.querySelectorAll('button, [role="button"]');
+  for (const button of buttons) {
+    const text = (button.textContent || button.innerText || '').trim().toLowerCase();
+    const ariaLabel = (button.getAttribute('aria-label') || '').toLowerCase();
+    
+    // Look for "Start recording" button (in the sidebar panel)
+    if ((text.includes('start recording') || text === 'start recording') ||
+        (ariaLabel.includes('start recording'))) {
+      // Make sure it's visible and clickable
+      const style = window.getComputedStyle(button);
+      if (style.display !== 'none' && style.visibility !== 'hidden') {
+        console.log('[Auto Record] ✅ Found Start recording button, clicking...');
+        button.click();
+        recordingStarted = true;
+        chrome.runtime.sendMessage({
+          action: 'recordingStarted',
+          success: true
+        });
+        return true;
+      }
+    }
+  }
+  
+  console.log('[Auto Record] ⚠️ Start recording button not found');
+  return false;
 }
 
 // Find the "More options" menu button
@@ -731,4 +834,5 @@ function monitorRecordingStatus() {
 
 // Start monitoring for recording status
 monitorRecordingStatus();
+
 
