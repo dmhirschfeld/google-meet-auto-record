@@ -146,9 +146,16 @@ function detectHostJoinViaDOM() {
       
       console.log('[Auto Record] Meeting controls found:', !!hasMeetingControls);
       
+      // For instant meetings created by the user, they are always the host
+      // Be more aggressive - if we're in a meeting and have controls, assume host
       if (hostControls || (isInstantMeeting && hasMeetingControls)) {
         console.log('[Auto Record] ✅ Host detected - proceeding to find recording button');
         // User is likely host, proceed anyway (button might be in menu)
+        hostJoined = true;
+        handleHostJoined();
+      } else if (isInstantMeeting && hasJoined) {
+        // For instant meetings, if user has joined, assume they're the host
+        console.log('[Auto Record] ✅ Instant meeting detected - assuming host status');
         hostJoined = true;
         handleHostJoined();
       } else {
@@ -160,6 +167,12 @@ function detectHostJoinViaDOM() {
             detectHostJoinViaDOM();
           } else if (retryCount >= MAX_RETRIES) {
             console.log('[Auto Record] ❌ Max retries reached, could not detect host');
+            // Last resort: if in meeting, try anyway
+            if (hasJoined && isInstantMeeting) {
+              console.log('[Auto Record] 🔄 Last resort: proceeding anyway for instant meeting');
+              hostJoined = true;
+              handleHostJoined();
+            }
           }
         }, RETRY_DELAY);
       }
@@ -235,23 +248,32 @@ function startRecording() {
 
 // Find the recording button in the DOM
 function findRecordingButton() {
+  console.log('[Auto Record] Searching for recording button...');
+  
   // Multiple selectors to try, as Google Meet uses dynamic class names
   
   // First, try to find all buttons and check their labels
   const allButtons = document.querySelectorAll('button, [role="button"]');
+  console.log('[Auto Record] Total buttons found:', allButtons.length);
+  
   for (const button of allButtons) {
     const ariaLabel = button.getAttribute('aria-label') || '';
     const textContent = button.textContent || '';
     const tooltip = button.getAttribute('data-tooltip') || '';
-    const label = (ariaLabel + ' ' + textContent + ' ' + tooltip).toLowerCase();
+    const title = button.getAttribute('title') || '';
+    const label = (ariaLabel + ' ' + textContent + ' ' + tooltip + ' ' + title).toLowerCase();
     
-    // Check for recording-related text
-    if ((label.includes('record') && label.includes('start')) || 
-        (label.includes('record') && !label.includes('stop') && !label.includes('end'))) {
-      console.log('Found recording button:', ariaLabel || textContent || tooltip);
+    // Check for recording-related text (more lenient)
+    if (label.includes('record') && 
+        !label.includes('stop') && 
+        !label.includes('end') &&
+        !label.includes('paused')) {
+      console.log('[Auto Record] ✅ Found recording button:', ariaLabel || textContent || tooltip || title);
       return button;
     }
   }
+  
+  console.log('[Auto Record] Recording button not found in main buttons, checking menu...');
   
   // Try direct selectors
   const selectors = [
@@ -297,6 +319,7 @@ function findRecordingButton() {
   // If not found, try searching in the "More options" menu
   const moreOptionsButton = findMoreOptionsButton();
   if (moreOptionsButton) {
+    console.log('[Auto Record] More options button found, opening menu...');
     // Click to open menu
     moreOptionsButton.click();
     
@@ -304,12 +327,21 @@ function findRecordingButton() {
     setTimeout(() => {
       const recordingButton = findRecordingButtonInMenu();
       if (recordingButton) {
+        console.log('[Auto Record] ✅ Found recording button in menu, clicking...');
         recordingButton.click();
         recordingStarted = true;
+        chrome.runtime.sendMessage({
+          action: 'recordingStarted',
+          success: true
+        });
+        return recordingButton;
+      } else {
+        console.log('[Auto Record] ⚠️ Recording button not found in menu');
       }
-    }, 500);
+    }, 1000); // Increased timeout for menu to open
   }
 
+  console.log('[Auto Record] ❌ Recording button not found');
   return null;
 }
 
