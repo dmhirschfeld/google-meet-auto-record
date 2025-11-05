@@ -524,11 +524,26 @@ function findRecordingInMeetingTools() {
 function handleRecordingDialog() {
   console.log('[Auto Record] Handling recording dialog...');
   
-  // Wait a bit for dialog to fully render, then retry if needed
+  // Wait for recording panel/slideout to fully appear (may take longer)
   let dialogAttempts = 0;
   const processDialog = () => {
     dialogAttempts++;
     console.log(`[Auto Record] Processing dialog (attempt ${dialogAttempts})...`);
+    
+    // Check if recording panel is visible by looking for "Record your video call" text
+    const recordingPanel = document.querySelector('[role="dialog"]') || 
+                          document.querySelector('[role="complementary"]') ||
+                          document.querySelector('div[class*="sidebar"]') ||
+                          document.querySelector('div[class*="panel"]');
+    
+    const hasRecordingPanel = recordingPanel && 
+      (recordingPanel.textContent || recordingPanel.innerText || '').toLowerCase().includes('record');
+    
+    if (!hasRecordingPanel && dialogAttempts < 5) {
+      console.log('[Auto Record] Recording panel not visible yet, waiting...');
+      setTimeout(processDialog, 500);
+      return;
+    }
     
     // Find and check "Include captions in the recording" checkbox
     const captionsCheckbox = findCheckboxByLabel('Include captions');
@@ -536,6 +551,9 @@ function handleRecordingDialog() {
       console.log('[Auto Record] Found captions checkbox, checking it...');
       if (!captionsCheckbox.checked) {
         captionsCheckbox.click();
+        console.log('[Auto Record] ✅ Captions checkbox clicked');
+      } else {
+        console.log('[Auto Record] Captions checkbox already checked');
       }
     } else {
       console.log('[Auto Record] ⚠️ Captions checkbox not found');
@@ -563,7 +581,14 @@ function handleRecordingDialog() {
         const label = cb.closest('label');
         const labelText = label ? (label.textContent || label.innerText || '') : '';
         const ariaLabel = cb.getAttribute('aria-label') || '';
-        console.log(`[Auto Record] Checkbox ${i}: checked=${cb.checked}, label="${labelText}", aria-label="${ariaLabel}"`);
+        const style = window.getComputedStyle(cb);
+        console.log(`[Auto Record] Checkbox ${i}: checked=${cb.checked}, visible=${style.display !== 'none'}, label="${labelText}", aria-label="${ariaLabel}"`);
+      }
+      
+      // Retry if not found
+      if (dialogAttempts < 5) {
+        setTimeout(processDialog, 500);
+        return;
       }
     }
     
@@ -582,12 +607,12 @@ function handleRecordingDialog() {
         // No consent dialog, go straight to Start button
         clickStartRecordingButton();
       }
-    }, 300);
+    }, 400);
   };
   
-  // Try immediately, then retry if needed
-  setTimeout(processDialog, 800);
-  setTimeout(() => processDialog(), 1500); // Retry after 1.5s if first attempt failed
+  // Start processing after initial delay to let panel render
+  setTimeout(processDialog, 1000);
+  setTimeout(() => processDialog(), 2000); // Retry after 2s if first attempt failed
 }
 
 // Find checkbox by label text (more comprehensive search)
