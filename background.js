@@ -108,19 +108,23 @@ async function authenticate() {
 }
 
 // Set up Google Workspace Events API subscription
-// Note: Google Workspace Events API requires a Pub/Sub topic for webhooks.
-// Since Chrome extensions can't easily host webhook endpoints, we'll use
-// API polling to check for events instead of webhooks.
+// NOTE: Disabled due to CORS restrictions - Chrome extensions cannot access these APIs directly
+// We rely on DOM-based detection instead, which is more reliable for this use case.
 async function setupSubscription() {
+  // Google Meet API and Workspace Events API are not accessible from Chrome extensions
+  // due to CORS restrictions. We use DOM-based detection instead.
+  console.log('Using DOM-based host detection (API methods disabled due to CORS restrictions)');
+  startPollingForHostJoin();
+  return;
+  
+  /* Disabled due to CORS restrictions and server requirements
   if (!accessToken || !currentTabId) {
-    // Fallback to DOM detection if no auth or tab
     console.log('No auth token or tab, using DOM detection');
     startPollingForHostJoin();
     return;
   }
 
   try {
-    // Get current meeting space ID from the tab
     const tab = await chrome.tabs.get(currentTabId);
     const meetingSpaceId = extractMeetingSpaceId(tab.url);
     
@@ -130,12 +134,8 @@ async function setupSubscription() {
       return;
     }
 
-    // Try to get the meeting space resource name
-    // Format: spaces/{meetingSpaceId}
     const targetResource = `spaces/${meetingSpaceId}`;
     
-    // Attempt to create subscription via API
-    // Note: This requires a Pub/Sub topic, which we'll handle gracefully
     const subscription = {
       targetResource: `//meet.googleapis.com/${targetResource}`,
       eventTypes: [
@@ -143,14 +143,10 @@ async function setupSubscription() {
         'google.workspace.meet.conference.v1.started'
       ],
       notificationEndpoint: {
-        // For Chrome extensions, we can't host a webhook endpoint
-        // So we'll use polling instead (see pollForEvents function)
-        // If you have a server, you can set up a Pub/Sub topic here
-        pubsubTopic: `projects/YOUR_PROJECT/topics/YOUR_TOPIC` // Requires server setup
+        pubsubTopic: `projects/YOUR_PROJECT/topics/YOUR_TOPIC`
       }
     };
 
-    // Try to create subscription
     try {
       const response = await fetch(`${API_BASE_URL}/subscriptions`, {
         method: 'POST',
@@ -165,26 +161,23 @@ async function setupSubscription() {
         const data = await response.json();
         subscriptionId = data.name;
         console.log('API subscription created:', subscriptionId);
-        // Start polling for events from the API
         startPollingEvents(targetResource);
         return;
       } else {
         const errorData = await response.json();
-        console.log('API subscription failed (expected for Chrome extension):', errorData.error?.message);
-        // Fall back to polling API directly or DOM detection
+        console.log('API subscription failed:', errorData.error?.message);
         startPollingEvents(targetResource);
       }
     } catch (apiError) {
-      console.log('API subscription not available, using event polling:', apiError);
-      // Use API polling instead of webhooks
+      console.log('API subscription not available:', apiError);
       startPollingEvents(targetResource);
     }
     
   } catch (error) {
     console.error('Error setting up subscription:', error);
-    // Fallback: Use DOM detection
     startPollingForHostJoin();
   }
+  */
 }
 
 // Extract meeting space ID from URL
@@ -224,14 +217,21 @@ async function checkSubscriptionStatus() {
 }
 
 // Poll for events using Google Workspace Events API
-// This is an alternative to webhooks that works in Chrome extensions
+// NOTE: Disabled due to CORS restrictions - Chrome extensions cannot access these APIs directly
+// We rely on DOM-based detection instead, which is more reliable for this use case.
 async function startPollingEvents(targetResource) {
+  // Google Meet API and Workspace Events API are not accessible from Chrome extensions
+  // due to CORS restrictions. We use DOM-based detection instead.
+  console.log('API polling disabled - using DOM-based detection instead (CORS restrictions)');
+  startPollingForHostJoin();
+  return;
+  
+  /* Disabled due to CORS restrictions
   if (!accessToken || !targetResource) {
     startPollingForHostJoin();
     return;
   }
 
-  // Clear any existing polling interval
   if (pollIntervalId) {
     clearInterval(pollIntervalId);
     pollIntervalId = null;
@@ -239,10 +239,8 @@ async function startPollingEvents(targetResource) {
 
   console.log('Starting API event polling for:', targetResource);
   
-  // Also try using Meet API to check participant status directly
   await checkMeetingParticipants(targetResource);
   
-  // Poll for events every 5 seconds
   pollIntervalId = setInterval(async () => {
     if (!currentTabId) {
       clearInterval(pollIntervalId);
@@ -250,21 +248,26 @@ async function startPollingEvents(targetResource) {
       return;
     }
 
-    // Check participants via Meet API (more reliable than Events API polling)
     await checkMeetingParticipants(targetResource);
   }, 5000);
 
-  // Also start DOM-based detection as backup
   startPollingForHostJoin();
+  */
 }
 
 // Check meeting participants using Google Meet API
+// NOTE: Disabled due to CORS restrictions - Chrome extensions cannot access Meet API directly
+// We rely on DOM-based detection instead, which is more reliable for this use case.
 async function checkMeetingParticipants(targetResource) {
+  // Google Meet API requires server-side authentication and is not accessible
+  // from Chrome extensions due to CORS restrictions. We rely on DOM-based detection instead.
+  console.log('Meet API polling disabled - using DOM-based detection instead (CORS restrictions)');
+  return;
+  
+  /* Disabled due to CORS restrictions
   if (!accessToken || !currentTabId) return;
 
   try {
-    // Use Meet API to get current meeting participants
-    // Format: spaces/{meetingSpaceId}
     const response = await fetch(`${MEET_API_BASE_URL}/${targetResource}/participants`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`
@@ -274,19 +277,16 @@ async function checkMeetingParticipants(targetResource) {
     if (response.ok) {
       const data = await response.json();
       if (data.participants) {
-        // Check if host/organizer has joined
         const host = data.participants.find(p => 
           p.role === 'ORGANIZER' || p.role === 'HOST'
         );
         
         if (host && host.joined) {
           console.log('Host joined detected via Meet API:', host);
-          // Clear polling interval
           if (pollIntervalId) {
             clearInterval(pollIntervalId);
             pollIntervalId = null;
           }
-          // Notify content script
           chrome.tabs.sendMessage(currentTabId, {
             action: 'hostJoined',
             participant: host,
@@ -297,8 +297,8 @@ async function checkMeetingParticipants(targetResource) {
     }
   } catch (error) {
     console.log('Meet API polling error:', error);
-    // Fall back to DOM detection if API fails
   }
+  */
 }
 
 // Polling fallback: Check for host join via content script (DOM-based)
